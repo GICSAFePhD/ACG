@@ -24,28 +24,78 @@ def ACG(RML,test = False):
 
     Topology_labels = {}
     for NetRelation in NetRelations.NetRelation:
-        #print(NetRelation.ElementA.Ref,NetRelation.ElementB.Ref,NetRelation.PositionOnA,NetRelation.PositionOnB)
-        navColor = 'r' if NetRelation.Navigability == "None" else 'g'
-        navStyle = '--' if NetRelation.Navigability == "None" else '-'
+        if (NetRelation.PositionOnA != None):
+            #print(NetRelation.ElementA.Ref,NetRelation.ElementB.Ref,NetRelation.PositionOnA,NetRelation.PositionOnB)
+            navColor = 'r' if NetRelation.Navigability == "None" else 'g'
+            navStyle = '--' if NetRelation.Navigability == "None" else '-'
 
-        G_Topology.add_edge(NetRelation.ElementA.Ref,NetRelation.ElementB.Ref, weight=3, color  = navColor, style = navStyle)
+            G_Topology.add_edge(NetRelation.ElementA.Ref,NetRelation.ElementB.Ref, weight=3, color  = navColor, style = navStyle)
 
-        #Topology_labels[(NetRelation.ElementA.Ref,NetRelation.ElementB.Ref)] = navColor
+            #Topology_labels[(NetRelation.ElementA.Ref,NetRelation.ElementB.Ref)] = navColor
 
     Switch_labels = {}
     for SwitchIS in SwitchesIS[0].SwitchIS:
-        Net = SwitchIS.LeftBranch[0].NetRelationRef.split('_')[1].split('ne')
-        nodeStart = 'ne' + Net[1]        
-        nodeEnd = 'ne' + Net[2]  
-        G_Switches.add_edge(nodeStart,nodeEnd)
-        Switch_labels[(nodeStart,nodeEnd)] = SwitchIS.Name[0].Name+'\n(L)'
+        if (SwitchIS.Type == "ordinarySwitch"):
+            Net = SwitchIS.LeftBranch[0].NetRelationRef.split('_')[1].split('ne')
+            nodeStart = 'ne' + Net[1]        
+            nodeEnd = 'ne' + Net[2]  
+            G_Switches.add_edge(nodeStart,nodeEnd)
+            Switch_labels[(nodeStart,nodeEnd)] = SwitchIS.Name[0].Name+'\n(L)'
 
-        Net = SwitchIS.RightBranch[0].NetRelationRef.split('_')[1].split('ne')
-        nodeStart = 'ne' + Net[1]        
-        nodeEnd = 'ne' + Net[2]  
-        G_Switches.add_edge(nodeStart,nodeEnd)
-        Switch_labels[(nodeStart,nodeEnd)] = SwitchIS.Name[0].Name+'\n(R)'
+            Net = SwitchIS.RightBranch[0].NetRelationRef.split('_')[1].split('ne')
+            nodeStart = 'ne' + Net[1]        
+            nodeEnd = 'ne' + Net[2]  
+            G_Switches.add_edge(nodeStart,nodeEnd)
+            Switch_labels[(nodeStart,nodeEnd)] = SwitchIS.Name[0].Name+'\n(R)'
 
+        if (SwitchIS.Type == "doubleSwitchCrossing"):
+            node = SwitchIS.SpotLocation[0].NetElementRef
+
+            straightBranch_A = SwitchIS.StraightBranch[0].NetRelationRef#.split('_')[1]
+            straightBranch_B = SwitchIS.StraightBranch[1].NetRelationRef#.split('_')[1]
+            turningBranch_A = SwitchIS.TurningBranch[0].NetRelationRef#.split('_')[1]
+            turningBranch_B = SwitchIS.TurningBranch[1].NetRelationRef#.split('_')[1]
+
+            straightBranch_1 = straightBranch_A if node in straightBranch_A else straightBranch_B
+            turningBranch_1 = turningBranch_A if node in turningBranch_A else turningBranch_B
+            straightBranch_2 = straightBranch_B if node in straightBranch_A else straightBranch_B
+            turningBranch_2 = turningBranch_B if node in turningBranch_A else turningBranch_B
+
+            nodeStart = node
+            nodeInt = straightBranch_1.split('_')[1].split('ne')[1:]
+            nodeEnd = 'ne'+nodeInt[0] if str(nodeStart[2:]) == nodeInt[1] else 'ne'+nodeInt[1]
+
+            #print(nodeStart,nodeEnd)
+                
+            G_Switches.add_edge(nodeStart,nodeEnd)
+            Switch_labels[(nodeStart,nodeEnd)] = SwitchIS.Name[0].Name+'\n(S)'
+
+            nodeStart = node
+            nodeInt = turningBranch_1.split('_')[1].split('ne')[1:]
+            nodeEnd = 'ne'+nodeInt[0] if str(nodeStart[2:]) == nodeInt[1] else 'ne'+nodeInt[1]
+
+            #print(nodeStart,nodeEnd)
+                
+            G_Switches.add_edge(nodeStart,nodeEnd)
+            Switch_labels[(nodeStart,nodeEnd)] = SwitchIS.Name[0].Name+'\n(T)'
+
+            nodeStart = ['ne'+x for x in straightBranch_2.split('_')[1].split('ne')[1:] if x in turningBranch_2.split('_')[1].split('ne')[1:]][0]
+            nodeInt = straightBranch_2.split('_')[1].split('ne')[1:]
+            nodeEnd = 'ne'+nodeInt[0] if str(nodeStart[2:]) == nodeInt[1] else 'ne'+nodeInt[1]
+
+            #print(nodeStart,nodeEnd)
+                
+            G_Switches.add_edge(nodeStart,nodeEnd)
+            Switch_labels[(nodeStart,nodeEnd)] = SwitchIS.Name[0].Name+'\n(S)'
+
+            nodeStart = ['ne'+x for x in straightBranch_2.split('_')[1].split('ne')[1:] if x in turningBranch_2.split('_')[1].split('ne')[1:]][0]
+            nodeInt = turningBranch_2.split('_')[1].split('ne')[1:]
+            nodeEnd = 'ne'+nodeInt[0] if str(nodeStart[2:]) == nodeInt[1] else 'ne'+nodeInt[1]
+
+            #print(nodeStart,nodeEnd)
+                
+            G_Switches.add_edge(nodeStart,nodeEnd)
+            Switch_labels[(nodeStart,nodeEnd)] = SwitchIS.Name[0].Name+'\n(T)'
 
     pos = nx.planar_layout(G_Topology)
   
