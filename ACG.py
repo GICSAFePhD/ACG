@@ -3,11 +3,15 @@ import matplotlib.pyplot as plt
 
 def ACG(RML,test = False):
     
-    print(RML)
-    
     print("#"*50+" Starting Automatic Code Generator "+"#"*50)
+    
     print("Reading railML object")
+    create_graphs(RML)
 
+    print("Generating VHDL code")
+
+
+def create_graphs(RML):
     options = {
     'node_color': 'lightgreen',
     'node_size': 500,
@@ -21,6 +25,7 @@ def ACG(RML,test = False):
     NetElements = RML.Infrastructure.Topology.NetElements
     NetRelations = RML.Infrastructure.Topology.NetRelations
     SwitchesIS = RML.Infrastructure.FunctionalInfrastructure.SwitchesIS
+    Crossings = RML.Infrastructure.FunctionalInfrastructure.Crossings
 
     Topology_labels = {}
     for NetRelation in NetRelations.NetRelation:
@@ -34,6 +39,22 @@ def ACG(RML,test = False):
             #Topology_labels[(NetRelation.ElementA.Ref,NetRelation.ElementB.Ref)] = navColor
 
     Switch_labels = {}
+
+    for crossings in Crossings[0].Crossing:
+        Net = crossings.External[0].Ref.split('_')[1].split('ne')
+        nodeStart = 'ne' + Net[1]        
+        nodeEnd = 'ne' + Net[2]  
+
+        G_Switches.add_edge(nodeStart,nodeEnd)
+        Switch_labels[(nodeStart,nodeEnd)] = crossings.Name[0].Name+'\n(X)'
+
+        Net = crossings.External[1].Ref.split('_')[1].split('ne')
+        nodeStart = 'ne' + Net[1]        
+        nodeEnd = 'ne' + Net[2]  
+
+        G_Switches.add_edge(nodeStart,nodeEnd)
+        Switch_labels[(nodeStart,nodeEnd)] = crossings.Name[0].Name+'\n(X)'        
+
     for SwitchIS in SwitchesIS[0].SwitchIS:
         if (SwitchIS.Type == "ordinarySwitch"):
             Net = SwitchIS.LeftBranch[0].NetRelationRef.split('_')[1].split('ne')
@@ -103,8 +124,6 @@ def ACG(RML,test = False):
     colors = [G_Topology[u][v]['color'] for u,v in edges]
     styles = [G_Topology[u][v]['style'] for u,v in edges]
     
-
-
     #edge_labels = dict([((n1, n2), f'{n1}->{n2}') for n1, n2 in G_Topology.edges])
 
 
@@ -119,5 +138,4 @@ def ACG(RML,test = False):
 
     plt.show()
 
-    #print("Generating interlocking table")
-    #print("Generating VHDL code")
+    
