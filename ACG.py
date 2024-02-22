@@ -10,8 +10,9 @@ def ACG(RML,example = 1,test = False):
     print("Reading railML object")
     
     network = create_graph_structure(RML,example)
-    print_network(network)
+    #print_network(network)
     create_graph(RML,network,example)
+    #create_graphs(RML,example)
 
     print("Generating VHDL code")
 
@@ -26,8 +27,6 @@ def create_graph_structure(RML,example = 1):
     Crossings =         RML.Infrastructure.FunctionalInfrastructure.Crossings
     SignalsIS =         RML.Infrastructure.FunctionalInfrastructure.SignalsIS
 
-    
-
     network = {}
 
     for netElements in NetElements.NetElement:
@@ -37,6 +36,7 @@ def create_graph_structure(RML,example = 1):
     if SwitchesIS != None: 
         for SwitchIS in SwitchesIS[0].SwitchIS:
             if (SwitchIS.Type == "ordinarySwitch"):
+
                 Net = SwitchIS.LeftBranch[0].NetRelationRef.split('_')[1].split('ne')
                 nodeLeft1 = 'ne' + Net[1]        
                 nodeLeft2 = 'ne' + Net[2]  
@@ -229,11 +229,13 @@ def create_graph(RML,network,example = 1):
     NetRelations =      RML.Infrastructure.Topology.NetRelations
     Routes =            RML.Interlocking.AssetsForIL[0].Routes
     
-    Graph = gv.Digraph('finite_state_machine',filename='a.gv', graph_attr={'overlap':'false','rankdir':"LR",'splines':'true','center':'1','labelloc':'t'},node_attr={'fillcolor': 'white', 'style': 'filled,bold', 'pendwidth':'5', 'fontname': 'Courier New', 'shape': 'Mrecord'}) #node_attr={'color': 'lightgreen', 'style': 'filled', 'size' : '8.5'}
+    Graph = gv.Graph('finite_state_machine',filename='a.gv', graph_attr={'overlap':'false','rankdir':"LR",'splines':'true','center':'1','labelloc':'t'},node_attr={'fillcolor': 'white', 'style': 'filled,bold', 'pendwidth':'5', 'fontname': 'Courier New', 'shape': 'Mrecord'}) #node_attr={'color': 'lightgreen', 'style': 'filled', 'size' : '8.5'}
 
     for NetRelation in NetRelations.NetRelation:
-        if (NetRelation.PositionOnA != None):
-            Graph.edge(NetRelation.ElementA.Ref,NetRelation.ElementB.Ref)
+        if (NetRelation.Navigability != "None" and any(i.isdigit() for i in NetRelation.ElementA.Ref)): #ONLY NAVIGABILITY
+            print(f'{NetRelation.ElementA.Ref} -> {NetRelation.ElementB.Ref}')
+            Graph.edge(NetRelation.ElementA.Ref,NetRelation.ElementB.Ref,label=f'R_X')
+    
 
     for element in network:
         #data = f'<<table border=\"0\" cellborder=\"0\" cellpadding=\"1\" bgcolor=\"white\"><tr><td bgcolor=\"black\" align=\"center\" colspan=\"2\"><font color=\"white\">{entry_net}</font></td></tr><tr><td align=\"left\" port=\"r2\"> Signal: </td><td bgcolor=\"grey\" align=\"right\">{equivalent_entry_signal}</td></tr></table>>'
@@ -260,6 +262,10 @@ def create_graph(RML,network,example = 1):
         if 'Platform' in network[element]:
             data += f'<tr><td bgcolor="grey" align="right">Platform</td>'
             data += f'<td align="left" port="r2">{' '.join(network[element]['Platform'])}</td></tr>'
+
+        if 'Crossing' in network[element]:
+            data += f'<tr><td bgcolor="grey" align="right">Crossing</td>'
+            data += f'<td align="left" port="r2">{' '.join(network[element]['Crossing'])}</td></tr>'
 
         if 'Signal' in network[element]:
             data += f'<tr><td bgcolor="grey" align="right">Signal</td>'
@@ -311,7 +317,7 @@ def create_graph(RML,network,example = 1):
 
     Graph.render(graph_file,format='svg', view = True)
 
-
+    Graph.render(graph_file+'s',format='svg', view = True)
 
 def create_graphs(RML,example = 1):
     options = {
@@ -325,7 +331,6 @@ def create_graphs(RML,example = 1):
     G_Switches = nx.Graph()
     G_Signals = gv.Digraph('finite_state_machine',filename='a.gv', graph_attr={'overlap':'false','rankdir':"LR",'splines':'true','center':'1'}) #node_attr={'color': 'lightgreen', 'style': 'filled', 'size' : '8.5'}
     
-   
 
     NetElements = RML.Infrastructure.Topology.NetElements
     NetRelations = RML.Infrastructure.Topology.NetRelations
@@ -352,6 +357,7 @@ def create_graphs(RML,example = 1):
             nodeStart = 'ne' + Net[1]        
             nodeEnd = 'ne' + Net[2]  
 
+            #print(nodeStart,nodeEnd)
             G_Switches.add_edge(nodeStart,nodeEnd)
             Switch_labels[(nodeStart,nodeEnd)] = crossings.Name[0].Name+'\n(X)'
 
@@ -359,6 +365,7 @@ def create_graphs(RML,example = 1):
             nodeStart = 'ne' + Net[1]        
             nodeEnd = 'ne' + Net[2]  
 
+            #print(nodeStart,nodeEnd)
             G_Switches.add_edge(nodeStart,nodeEnd)
             Switch_labels[(nodeStart,nodeEnd)] = crossings.Name[0].Name+'\n(X)'        
 
@@ -377,6 +384,7 @@ def create_graphs(RML,example = 1):
             Switch_labels[(nodeStart,nodeEnd)] = SwitchIS.Name[0].Name+'\n(R)'
 
         if (SwitchIS.Type == "doubleSwitchCrossing"):
+
             node = SwitchIS.SpotLocation[0].NetElementRef
 
             straightBranch_A = SwitchIS.StraightBranch[0].NetRelationRef#.split('_')[1]
@@ -481,7 +489,7 @@ def create_graphs(RML,example = 1):
     nx.draw(G_Switches,pos,edge_color = 'g', labels={node: node for node in G_Switches.nodes()},**options) 
     nx.draw_networkx_edge_labels(G_Switches, pos, edge_labels = Switch_labels,font_color='red')
 
-    graph_file = "App//Layouts//Example_"+str(example)+"//Graph"
+    graph_file = "App//Layouts//Example_"+str(example)+"//Graphsss"
 
     #plt.savefig(graph_file, format="PNG",dpi=1000)
 
@@ -496,6 +504,4 @@ def create_graphs(RML,example = 1):
 
     G_Signals.render(graph_file,format='svg', view = True)
 
-    plt.show()
-
-    
+    plt.show()    
