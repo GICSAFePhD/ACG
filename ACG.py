@@ -10,11 +10,22 @@ def ACG(RML,example = 1,test = False):
     print("Reading railML object")
     
     network = create_graph_structure(RML,example)
-    #print_network(network)
+    print_network(network)
     create_graph(RML,network,example)
     #create_graphs(RML,example)
-
     print("Generating VHDL code")
+
+    # Calculate N and M
+    # Create UART files
+
+    # Create nodes
+    # Create switch
+    # Create double switch
+    # Create crossing
+    # Connect network
+
+    # Create railway elements
+    # Connect railway elements
 
 def create_graph_structure(RML,example = 1):
 
@@ -84,14 +95,14 @@ def create_graph_structure(RML,example = 1):
 
                 #print(f'S:{nodeStart} {nodeEnd}')
                     
-                if 'Switch' not in network[nodeStart]:
-                    network[nodeStart] |= {'Switch':[]}
-                if 'Switch' not in network[nodeEnd]:
-                    network[nodeEnd] |= {'Switch':[]}
-                if SwitchIS.Name[0].Name not in network[nodeStart]['Switch']:
-                    network[nodeStart]['Switch'].append(SwitchIS.Name[0].Name)
-                if SwitchIS.Name[0].Name not in network[nodeEnd]['Switch']:
-                    network[nodeEnd]['Switch'].append(SwitchIS.Name[0].Name)
+                if 'Switch_X' not in network[nodeStart]:
+                    network[nodeStart] |= {'Switch_X':[]}
+                if 'Switch_X' not in network[nodeEnd]:
+                    network[nodeEnd] |= {'Switch_X':[]}
+                if SwitchIS.Name[0].Name not in network[nodeStart]['Switch_X']:
+                    network[nodeStart]['Switch_X'].append(SwitchIS.Name[0].Name)
+                if SwitchIS.Name[0].Name not in network[nodeEnd]['Switch_X']:
+                    network[nodeEnd]['Switch_X'].append(SwitchIS.Name[0].Name)
 
                 nodeStart = node
                 nodeInt = turningBranch_1.split('_')[1].split('ne')[1:]
@@ -99,14 +110,14 @@ def create_graph_structure(RML,example = 1):
 
                 #print(f'T:{nodeStart} {nodeEnd}')
                     
-                if 'Switch' not in network[nodeStart]:
-                    network[nodeStart] |= {'Switch':[]}
-                if 'Switch' not in network[nodeEnd]:
-                    network[nodeEnd] |= {'Switch':[]}
-                if SwitchIS.Name[0].Name not in network[nodeStart]['Switch']:
-                    network[nodeStart]['Switch'].append(SwitchIS.Name[0].Name)
-                if SwitchIS.Name[0].Name not in network[nodeEnd]['Switch']:
-                    network[nodeEnd]['Switch'].append(SwitchIS.Name[0].Name)
+                if 'Switch_X' not in network[nodeStart]:
+                    network[nodeStart] |= {'Switch_X':[]}
+                if 'Switch_X' not in network[nodeEnd]:
+                    network[nodeEnd] |= {'Switch_X':[]}
+                if SwitchIS.Name[0].Name not in network[nodeStart]['Switch_X']:
+                    network[nodeStart]['Switch_X'].append(SwitchIS.Name[0].Name)
+                if SwitchIS.Name[0].Name not in network[nodeEnd]['Switch_X']:
+                    network[nodeEnd]['Switch_X'].append(SwitchIS.Name[0].Name)
 
                 nodeStart = ['ne'+x for x in straightBranch_2.split('_')[1].split('ne')[1:] if x in turningBranch_2.split('_')[1].split('ne')[1:]][0]
                 nodeInt = straightBranch_2.split('_')[1].split('ne')[1:]
@@ -114,14 +125,14 @@ def create_graph_structure(RML,example = 1):
 
                 #print(f'S:{nodeStart} {nodeEnd}')
                     
-                if 'Switch' not in network[nodeStart]:
-                    network[nodeStart] |= {'Switch':[]}
-                if 'Switch' not in network[nodeEnd]:
-                    network[nodeEnd] |= {'Switch':[]}
-                if SwitchIS.Name[0].Name not in network[nodeStart]['Switch']:
-                    network[nodeStart]['Switch'].append(SwitchIS.Name[0].Name)
-                if SwitchIS.Name[0].Name not in network[nodeEnd]['Switch']:
-                    network[nodeEnd]['Switch'].append(SwitchIS.Name[0].Name)
+                if 'Switch_X' not in network[nodeStart]:
+                    network[nodeStart] |= {'Switch_X':[]}
+                if 'Switch_X' not in network[nodeEnd]:
+                    network[nodeEnd] |= {'Switch_X':[]}
+                if SwitchIS.Name[0].Name not in network[nodeStart]['Switch_X']:
+                    network[nodeStart]['Switch_X'].append(SwitchIS.Name[0].Name)
+                if SwitchIS.Name[0].Name not in network[nodeEnd]['Switch_X']:
+                    network[nodeEnd]['Switch_X'].append(SwitchIS.Name[0].Name)
 
                 nodeStart = ['ne'+x for x in straightBranch_2.split('_')[1].split('ne')[1:] if x in turningBranch_2.split('_')[1].split('ne')[1:]][0]
                 nodeInt = turningBranch_2.split('_')[1].split('ne')[1:]
@@ -129,14 +140,14 @@ def create_graph_structure(RML,example = 1):
 
                 #print(f'T:{nodeStart} {nodeEnd}')
                     
-                if 'Switch' not in network[nodeStart]:
-                    network[nodeStart] |= {'Switch':[]}
-                if 'Switch' not in network[nodeEnd]:
-                    network[nodeEnd] |= {'Switch':[]}
-                if SwitchIS.Name[0].Name not in network[nodeStart]['Switch']:
-                    network[nodeStart]['Switch'].append(SwitchIS.Name[0].Name)
-                if SwitchIS.Name[0].Name not in network[nodeEnd]['Switch']:
-                    network[nodeEnd]['Switch'].append(SwitchIS.Name[0].Name)
+                if 'Switch_X' not in network[nodeStart]:
+                    network[nodeStart] |= {'Switch_X':[]}
+                if 'Switch_X' not in network[nodeEnd]:
+                    network[nodeEnd] |= {'Switch_X':[]}
+                if SwitchIS.Name[0].Name not in network[nodeStart]['Switch_X']:
+                    network[nodeStart]['Switch_X'].append(SwitchIS.Name[0].Name)
+                if SwitchIS.Name[0].Name not in network[nodeEnd]['Switch_X']:
+                    network[nodeEnd]['Switch_X'].append(SwitchIS.Name[0].Name)
 
     if LevelCrossingsIS != None:  
         for LevelCrossingIS in LevelCrossingsIS[0].LevelCrossingIS:
@@ -227,97 +238,101 @@ def print_network(network):
 def create_graph(RML,network,example = 1):
 
     NetRelations =      RML.Infrastructure.Topology.NetRelations
+    SignalsIS =         RML.Infrastructure.FunctionalInfrastructure.SignalsIS
     Routes =            RML.Interlocking.AssetsForIL[0].Routes
-    
+
     Graph = gv.Graph('finite_state_machine',filename='a.gv', graph_attr={'overlap':'false','rankdir':"LR",'splines':'true','center':'1','labelloc':'t'},node_attr={'fillcolor': 'white', 'style': 'filled,bold', 'pendwidth':'5', 'fontname': 'Courier New', 'shape': 'Mrecord'}) #node_attr={'color': 'lightgreen', 'style': 'filled', 'size' : '8.5'}
+    G_Topology = nx.Graph()
+
+    Signal_net = {}
+    Signal_labels = {}
+    for SignalIS in SignalsIS.SignalIS:
+        Signal_net[SignalIS.Id] = {'net':SignalIS.SpotLocation[0].NetElementRef, 'equivalent':SignalIS.Designator[0].Entry[7:]}
 
     for NetRelation in NetRelations.NetRelation:
         if (NetRelation.Navigability != "None" and any(i.isdigit() for i in NetRelation.ElementA.Ref)): #ONLY NAVIGABILITY
-            print(f'{NetRelation.ElementA.Ref} -> {NetRelation.ElementB.Ref}')
-            Graph.edge(NetRelation.ElementA.Ref,NetRelation.ElementB.Ref,label=f'R_X')
-    
-
-    for element in network:
-        #data = f'<<table border=\"0\" cellborder=\"0\" cellpadding=\"1\" bgcolor=\"white\"><tr><td bgcolor=\"black\" align=\"center\" colspan=\"2\"><font color=\"white\">{entry_net}</font></td></tr><tr><td align=\"left\" port=\"r2\"> Signal: </td><td bgcolor=\"grey\" align=\"right\">{equivalent_entry_signal}</td></tr></table>>'
-        data = f'<<table border=\"0\" cellborder=\"0\" cellpadding=\"3\" bgcolor=\"white\"><tr><td bgcolor=\"black\" align=\"center\" colspan=\"2\"><font color=\"white\">{element}</font></td></tr><tr><td bgcolor="grey" align="right">{element}</td><td align="left" port="r2">{element}-{element}-{element}</td></tr></table>>'
-        
-        data = f'<<table border=\"0\" cellborder=\"0\" cellpadding=\"3\" bgcolor=\"white\"><tr><td bgcolor=\"black\" align=\"center\" colspan=\"2\"><font color=\"white\">{element}</font></td></tr>'
-
-        if 'Switch' in network[element]:
-            data += f'<tr><td bgcolor="grey" align="right">Switch</td>'
-            data += f'<td align="left" port="r2">{' '.join(network[element]['Switch'])}</td></tr>'
-
-        if 'Border' in network[element]:
-            data += f'<tr><td bgcolor="grey" align="right">Border</td>'
-            data += f'<td align="left" port="r2">{' '.join(network[element]['Border'])}</td></tr>'
-
-        if 'BufferStop' in network[element]:
-            data += f'<tr><td bgcolor="grey" align="right">BufferStop</td>'
-            data += f'<td align="left" port="r2">{' '.join(network[element]['BufferStop'])}</td></tr>'
-
-        if 'LevelCrossing' in network[element]:
-            data += f'<tr><td bgcolor="grey" align="right">LevelCrossing</td>'
-            data += f'<td align="left" port="r2">{' '.join(network[element]['LevelCrossing'])}</td></tr>'
-
-        if 'Platform' in network[element]:
-            data += f'<tr><td bgcolor="grey" align="right">Platform</td>'
-            data += f'<td align="left" port="r2">{' '.join(network[element]['Platform'])}</td></tr>'
-
-        if 'Crossing' in network[element]:
-            data += f'<tr><td bgcolor="grey" align="right">Crossing</td>'
-            data += f'<td align="left" port="r2">{' '.join(network[element]['Crossing'])}</td></tr>'
-
-        if 'Signal' in network[element]:
-            data += f'<tr><td bgcolor="grey" align="right">Signal</td>'
-            data += f'<td align="left" port="r2">{' '.join(network[element]['Signal'])}</td></tr>'
-
-
-        data += '</table>>'
-
-        Graph.node(element,label = data)
-
-
+            #print(f'{NetRelation.ElementA.Ref} -> {NetRelation.ElementB.Ref}')
+            #Graph.edge(NetRelation.ElementA.Ref,NetRelation.ElementB.Ref)
+            G_Topology.add_edge(NetRelation.ElementA.Ref,NetRelation.ElementB.Ref)
 
     i = 1
     for Route in Routes.Route:
         entry_signal = Route.RouteEntry.RefersTo.Ref.split('_')[1]
         exit_signal = Route.RouteExit.RefersTo.Ref.split('_')[1]
 
-        #entry_net = Signal_net[entry_signal]['net']
-        #exit_net = Signal_net[exit_signal]['net']
+        entry_net = Signal_net[entry_signal]['net']
+        exit_net = Signal_net[exit_signal]['net']
         
-        #equivalent_entry_signal = Signal_net[entry_signal]['equivalent']
-        #equivalent_exit_signal = Signal_net[exit_signal]['equivalent']
+        equivalent_entry_signal = Signal_net[entry_signal]['equivalent']
+        equivalent_exit_signal = Signal_net[exit_signal]['equivalent']
 
-        #path = nx.shortest_path(G_Topology, source=entry_net, target=exit_net) 
-
-        #if len(path) == 1:
-        #    G_Signals.attr('node', shape='Mrecord')
-        #    G_Signals.edge(entry_net,exit_net,label=f'R_{i:02d}')
-
-        #    G_Signals.node(entry_net,label = f'<<table border=\"0\" cellborder=\"0\" cellpadding=\"1\" bgcolor=\"white\"><tr><td bgcolor=\"black\" align=\"center\" colspan=\"2\"><font color=\"white\">{entry_net}</font></td></tr><tr><td align=\"left\" port=\"r2\"> Signal: </td><td bgcolor=\"grey\" align=\"right\">{equivalent_entry_signal}</td></tr></table>>')
-
-        #    Signal_labels[(entry_net,exit_net)] = f'R_{i:02d}'
-        #else:
-        #    for p in range(len(path)-1):
-        #        print(path[p],path[p+1])
-        #        G_Signals.attr('node', shape='doublecircle')
-        #        G_Signals.edge(path[p],path[p+1],label=f'R_{i:02d}')
-                
-        #        Signal_labels[(path[p],path[p+1])] = f'R_{i:02d}'
+        path = nx.shortest_path(G_Topology, source=entry_net, target=exit_net) 
+        
+        if len(path) == 1:
+            Graph.edge(entry_net,exit_net,label = f'R_{i:02d}')
+        else:
+            for p in range(len(path)-1):
+                Graph.edge(path[p],path[p+1],label = f'R_{i:02d}')
 
         #print(f'R_{i:02d} | {entry_net} --> ({equivalent_entry_signal}) --> {path} --> ({equivalent_exit_signal}) --> {exit_net}')
 
-        #i = i + 1
+        i = i + 1
 
+    routed = []
+    for i in Graph.body:
+        if "--" in i:
+            x = i[1:-1].split(" ")
+            routed.append([x[0],x[2]])
 
+    #print(routed)
 
+    for NetRelation in NetRelations.NetRelation:
+        if (NetRelation.Navigability != "None" and any(i.isdigit() for i in NetRelation.ElementA.Ref)): #ONLY NAVIGABILITY
+            if not ( [NetRelation.ElementA.Ref,NetRelation.ElementB.Ref] in routed or [NetRelation.ElementB.Ref,NetRelation.ElementA.Ref] in routed):
+                Graph.edge(NetRelation.ElementA.Ref,NetRelation.ElementB.Ref)
+               
+    for element in network:
+        data = f'<<table border=\"0\" cellborder=\"0\" cellpadding=\"3\" bgcolor=\"white\"><tr><td bgcolor=\"black\" align=\"center\" colspan=\"2\"><font color=\"white\">{element}</font></td></tr>'
+
+        if 'Switch' in network[element]:
+            data += f'<tr><td bgcolor="red" align="right">Switch</td>'
+            data += f'<td align="left" port="r2">{' '.join(network[element]['Switch'])}</td></tr>'
+
+        if 'Switch_X' in network[element]:
+            data += f'<tr><td bgcolor="darkred" align="right">Double Switch</td>'
+            data += f'<td align="left" port="r2">{' '.join(network[element]['Switch_X'])}</td></tr>'
+
+        if 'Border' in network[element]:
+            data += f'<tr><td bgcolor="lightslateblue" align="right">Border</td>'
+            data += f'<td align="left" port="r2">{' '.join(network[element]['Border'])}</td></tr>'
+
+        if 'BufferStop' in network[element]:
+            data += f'<tr><td bgcolor="olive" align="right">BufferStop</td>'
+            data += f'<td align="left" port="r2">{' '.join(network[element]['BufferStop'])}</td></tr>'
+
+        if 'LevelCrossing' in network[element]:
+            data += f'<tr><td bgcolor="darkcyan" align="right">LevelCrossing</td>'
+            data += f'<td align="left" port="r2">{' '.join(network[element]['LevelCrossing'])}</td></tr>'
+
+        if 'Platform' in network[element]:
+            data += f'<tr><td bgcolor="cornflowerblue" align="right">Platform</td>'
+            data += f'<td align="left" port="r2">{' '.join(network[element]['Platform'])}</td></tr>'
+
+        if 'Crossing' in network[element]:
+            data += f'<tr><td bgcolor="pink" align="right">Crossing</td>'
+            data += f'<td align="left" port="r2">{' '.join(network[element]['Crossing'])}</td></tr>'
+
+        if 'Signal' in network[element]:
+            data += f'<tr><td bgcolor="yellowgreen" align="right">Signal</td>'
+            data += f'<td align="left" port="r2">{' '.join(network[element]['Signal'])}</td></tr>'
+
+        data += '</table>>'
+
+        Graph.node(element,label = data)
 
     graph_file = "App//Layouts//Example_"+str(example)+"//Graph"
 
     Graph.render(graph_file,format='svg', view = True)
-
-    Graph.render(graph_file+'s',format='svg', view = True)
 
 def create_graphs(RML,example = 1):
     options = {
