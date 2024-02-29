@@ -10,6 +10,7 @@ class ACG():
 	def create_graph_structure(self,RML,example = 1):
 
 		NetElements =       RML.Infrastructure.Topology.NetElements
+		NetRelations =		RML.Infrastructure.Topology.NetRelations
 		SwitchesIS =        RML.Infrastructure.FunctionalInfrastructure.SwitchesIS
 		LevelCrossingsIS =  RML.Infrastructure.FunctionalInfrastructure.LevelCrossingsIS
 		Platforms =         RML.Infrastructure.FunctionalInfrastructure.Platforms
@@ -23,6 +24,20 @@ class ACG():
 		for netElements in NetElements.NetElement:
 			if netElements.ElementCollectionUnordered == None:
 				network[netElements.Id] = {}
+
+		for netRelations in NetRelations.NetRelation:
+			if netRelations.Navigability != 'None':
+				aux = netRelations.Id.split('_')[1].split('ne')
+				nodeBegin = 'ne'+aux[1]
+				nodeEnd = 'ne'+aux[2]
+				#print(nodeBegin,nodeEnd)
+				if 'Neighbour' not in network[nodeBegin]:	
+					network[nodeBegin] |= {'Neighbour':[]}
+				if 'Neighbour' not in network[nodeEnd]:	
+					network[nodeEnd] |= {'Neighbour':[]}
+
+				network[nodeBegin]['Neighbour'].append(nodeEnd)
+				network[nodeEnd]['Neighbour'].append(nodeBegin)
 
 		if SwitchesIS != None: 
 			for SwitchIS in SwitchesIS[0].SwitchIS:
@@ -2049,7 +2064,7 @@ class ACG():
 		
 		f.close()  # Close header file  
 
-	def createNetwork(self,N,n_netElements,n_signals,n_switches,n_doubleSwitch,n_levelCrossings,example = 1):
+	def createNetwork(self,graph,N,n_netElements,n_signals,n_switches,n_doubleSwitch,n_levelCrossings,example = 1):
 		node = 'network'
 		f = open(f'App/Layouts/Example_{example}/VHDL/{node}.vhd',"w+")
 		
@@ -2058,7 +2073,7 @@ class ACG():
 		
 		# Include library
 		self.includeLibrary(f,True)
-			
+
 		# network entity
 		network = "network"
 		f.write(f'\tentity {network} is\n')
@@ -2103,10 +2118,15 @@ class ACG():
 
 		f.write(f'architecture Behavioral of {network} is\r\n')
 
+		
+		levelCrossingId = self.getLevelCrossings(graph)
+
 		# component levelCrossing  
 		if n_levelCrossings > 0:
-			self.createLevelCrossing(mode = 'component',f = f)
-			self.createLevelCrossing(mode = 'entity',f = None, example = example)
+			for i in levelCrossingId:
+				index = list(levelCrossingId.keys()).index(i)
+				self.createLevelCrossing(index,i,levelCrossingId[i],mode = 'component',f = f)
+				self.createLevelCrossing(index,i,levelCrossingId[i],mode = 'entity',f = None, example = example)
 		# component singleSwitch  
 		if n_switches > 0:  	
 			self.createSingleSwitch(mode = 'component',f = f)
@@ -2129,15 +2149,21 @@ class ACG():
 
 		f.write(f'begin\r\n') 
 
-
-		#TODO: USE NAMES AS INDEX
+		print(list(graph.keys()))
 
 
 		# instantiate levelCrossings
-		if n_levelCrossings > 1:
-			for i in range(n_levelCrossings):
-				f.write(f'\tlevelCrossing_{i} : levelCrossing port map')
-				f.write(f'(clock => clock, indication => levelCrossings_i({i}), command_in => \'0\' , command_out  => levelCrossings_o({i}), correspondence => OPEN);\r\n')
+		if n_levelCrossings > 0:
+			for i in levelCrossingId:
+				index = list(levelCrossingId.keys()).index(i)
+				f.write(f'\tlevelCrossing_{i} : levelCrossing_{index} port map(')
+				f.write(f'clock => clock, ')
+
+				for element in levelCrossingId[i]:
+					netElement = list(graph.keys()).index(element)
+					f.write(f'command_{element} => ocupation({netElement}), ')
+
+				f.write(f'indication => levelCrossings_i({index}), command  => levelCrossings_o({index}), correspondence => OPEN);\r\n')
 		if n_levelCrossings == 1:
 			f.write(f'\tlevelCrossing_0 : levelCrossing port map')
 			f.write(f'(clock => clock, indication => levelCrossings_i, command_in => \'0\' , command_out  => levelCrossings_o, correspondence => OPEN);\r\n')
@@ -2182,9 +2208,25 @@ class ACG():
     
 		f.close()  # Close header file	
 
-	def createLevelCrossing(self,mode, f = None,example = 1):
+	def getLevelCrossings(self,network):
+		levelCrossingId = {}
+
+		for element in network:
+			if 'LevelCrossing' in network[element]:
+				for levelCrossing in network[element]['LevelCrossing']:
+					if levelCrossing not in levelCrossingId:
+						levelCrossingId[levelCrossing] = []
+
+					if element not in levelCrossingId[levelCrossing]:
+						levelCrossingId[levelCrossing].append(element)
+
+					if network[element]['Neighbour'] not in levelCrossingId[levelCrossing]:
+						levelCrossingId[levelCrossing].append(*network[element]['Neighbour'])
+		return levelCrossingId
+
+	def createLevelCrossing(self,index,name,neighbours,mode, f = None,example = 1):	
 		if mode == 'entity':
-			node = 'levelCrossing'
+			node = f'levelCrossing_{index}'
 			f = open(f'App/Layouts/Example_{example}/VHDL/{node}.vhd',"w+")
 			
 			# Initial comment
@@ -2193,13 +2235,14 @@ class ACG():
 			# Include library
 			self.includeLibrary(f)
 		
-		levelCrossing = "levelCrossing"
+		levelCrossing = f'levelCrossing_{index}'
 		f.write(f'\t{mode} {levelCrossing} is\n')
 		f.write(f'\t\tport(\n')
 		f.write(f'\t\t\tclock : in std_logic;\n')
+		for neighbour in neighbours:
+			f.write(f'\t\t\tcommand_{neighbour} : in std_logic;\n')
 		f.write(f'\t\t\tindication : in std_logic;\n')
-		f.write(f'\t\t\tcommand_in : in std_logic;\n')
-		f.write(f'\t\t\tcommand_out : out std_logic;\n')
+		f.write(f'\t\t\tcommand : out std_logic;\n')
 		f.write(f'\t\t\tcorrespondence : out std_logic\n')
 		f.write(f'\t\t);\n')
 		f.write(f'\tend {mode} {levelCrossing};\r\n')
@@ -2207,8 +2250,8 @@ class ACG():
 		if mode == 'entity':
 			f.write(f'architecture Behavioral of {node} is\r\n')
 			f.write(f'begin\r\n')
-
-			f.write(f'\tcommand_out <= command_in;\r\n')
+			commands = " or ".join([f'command_{i}' for i in neighbours])
+			f.write(f'\tcommand <= {commands};\r\n')
 			f.write(f'\tcorrespondence <= indication;\r\n')
 
 			f.write(f'end Behavioral;') 
@@ -2339,8 +2382,6 @@ class ACG():
 			f.write(f'end Behavioral;') 
 			f.close()  # Close header file
 
-
-	
 	def createPrinter(self,M,example = 1):
 		node = 'printer'
 		f = open(f'App/Layouts/Example_{example}/VHDL/{node}.vhd',"w+")
@@ -2572,31 +2613,9 @@ class ACG():
 		print(f'Done')
 		
 		print(f'Creating network ... ',end='')
-		self.createNetwork(N,n_netElements,n_signals,n_switches,n_doubleSwitch,n_levelCrossings,example)
+		self.createNetwork(network,N,n_netElements,n_signals,n_switches,n_doubleSwitch,n_levelCrossings,example)
 		print(f'Done')
-		
-		'''
-		print(f'Creating nodes ... ',end='')
-		self.createNode()
-		print(f'Done')
-		
-		print(f'Creating level crossings ... ',end='')
-		self.createLevelCrossing()
-		print(f'Done')
-
-		print(f'Creating single switches ... ',end='')
-		self.createSingleSwitch()
-		print(f'Done')
-		
-		print(f'Creating double switches ... ',end='')
-		self.createDoubleSwitch()
-		print(f'Done')
-		
-		print(f'Creating signals ... ',end='')
-		self.createSignals()
-		print(f'Done')
-		'''
-
+	
 		print(f'Creating printer ... ',end='')
 		self.createPrinter(M,example)
 		print(f'Done')
