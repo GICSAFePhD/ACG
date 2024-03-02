@@ -224,6 +224,7 @@ class ACG():
 					network[node] |= {'Signal':[]}
 				if signal not in network[node]['Signal']:
 					network[node]['Signal'].append(signal)
+		
 		return network
 
 	def print_network(self,network):
@@ -404,7 +405,7 @@ class ACG():
 
 		return N,M,n_netElements,n_switches,n_doubleSwitch,n_levelCrossings,n_signals_1,n_signals_2,n_signals_3
 
-	def createPacket(self,n_signals,n_doubleSwitch,example = 1):
+	def createPacket(self,n_switches,n_doubleSwitch,n_levelCrossings,n_signals,example = 1):
 		node = 'my_package'
 				
 		f = open(f'App/Layouts/Example_{example}/VHDL/{node}.vhd',"w+")
@@ -419,21 +420,22 @@ class ACG():
 		packet = 'my_package'
 		f.write(f'\tpackage {packet} is\n')
 		
-		if n_signals > 1:
-			type = 'signals_type'
-			f.write(f'\t\ttype {type} is record\n')
-			f.write(f'\t\t\tmsb : std_logic_vector({n_signals}-1 downto 0);\n')
-			f.write(f'\t\t\tlsb : std_logic_vector({n_signals}-1 downto 0);\n')
-			f.write(f'\t\tend record {type};\n')
-
-			type = 'signal_type'
+		if n_switches > 0:		
+			type = 'sSwitch_type'
 			f.write(f'\t\ttype {type} is record\n')
 			f.write(f'\t\t\tmsb : std_logic;\n')
 			f.write(f'\t\t\tlsb : std_logic;\n')
 			f.write(f'\t\tend record {type};\n')
+		
+		if n_switches > 1:
+			type = 'sSwitches_type'
+			f.write(f'\t\ttype {type} is record\n')
+			f.write(f'\t\t\tmsb : std_logic_vector({n_switches}-1 downto 0);\n')
+			f.write(f'\t\t\tlsb : std_logic_vector({n_switches}-1 downto 0);\n')
+			f.write(f'\t\tend record {type};\n')
 
-		if n_signals == 1:
-			type = 'signal_type'
+		if n_doubleSwitch > 0:		
+			type = 'dSwitch_type'
 			f.write(f'\t\ttype {type} is record\n')
 			f.write(f'\t\t\tmsb : std_logic;\n')
 			f.write(f'\t\t\tlsb : std_logic;\n')
@@ -446,18 +448,37 @@ class ACG():
 			f.write(f'\t\t\tlsb : std_logic_vector({n_doubleSwitch}-1 downto 0);\n')
 			f.write(f'\t\tend record {type};\n')
 
-			type = 'dSwitch_type'
+		if n_levelCrossings >0:
+			type = 'levelCrossing_type'
 			f.write(f'\t\ttype {type} is record\n')
 			f.write(f'\t\t\tmsb : std_logic;\n')
 			f.write(f'\t\t\tlsb : std_logic;\n')
+			f.write(f'\t\tend record {type};\n')
+				
+		if n_levelCrossings > 1:
+			type = 'levelCrossings_type'
+			f.write(f'\t\ttype {type} is record\n')
+			f.write(f'\t\t\tmsb : std_logic_vector({n_levelCrossings}-1 downto 0);\n')
+			f.write(f'\t\t\tlsb : std_logic_vector({n_levelCrossings}-1 downto 0);\n')
+			f.write(f'\t\tend record {type};\n')
+		
+		if n_signals > 0:
+			type = 'signal_type'
+			f.write(f'\t\ttype {type} is record\n')
+			f.write(f'\t\t\tmsb : std_logic;\n')
+			f.write(f'\t\t\tlsb : std_logic;\n')
+			f.write(f'\t\tend record {type};\n')
+				
+		if n_signals > 1:
+			type = 'signals_type'
+			f.write(f'\t\ttype {type} is record\n')
+			f.write(f'\t\t\tmsb : std_logic_vector({n_signals}-1 downto 0);\n')
+			f.write(f'\t\t\tlsb : std_logic_vector({n_signals}-1 downto 0);\n')
 			f.write(f'\t\tend record {type};\n')
 
-		if n_doubleSwitch == 1:		
-			type = 'dSwitch_type'
-			f.write(f'\t\ttype {type} is record\n')
-			f.write(f'\t\t\tmsb : std_logic;\n')
-			f.write(f'\t\t\tlsb : std_logic;\n')
-			f.write(f'\t\tend record {type};\n')
+		
+
+		
 
 		#f.write(f'\t\ttype int_array is array(0 to {n_signals}-1) of integer;\r\n')
 		
@@ -2065,6 +2086,12 @@ class ACG():
 		f.close()  # Close header file  
 
 	def createNetwork(self,graph,N,n_netElements,n_signals,n_switches,n_doubleSwitch,n_levelCrossings,example = 1):
+		# Eliminate nodes
+		# Create routes
+		# Add interlock to dynamic elements
+		# Routes disable after X seconds if not succesfull
+		
+		
 		node = 'network'
 		f = open(f'App/Layouts/Example_{example}/VHDL/{node}.vhd',"w+")
 		
@@ -2118,19 +2145,23 @@ class ACG():
 
 		f.write(f'architecture Behavioral of {network} is\r\n')
 
-		
-		levelCrossingId = self.getLevelCrossings(graph)
+		levelCrossingData = self.getLevelCrossings(graph)
+		#print(levelCrossingData)
+		singleSwitchData = self.getSingleSwitch(graph)
+		#print(singleSwitchData)
 
 		# component levelCrossing  
 		if n_levelCrossings > 0:
-			for i in levelCrossingId:
-				index = list(levelCrossingId.keys()).index(i)
-				self.createLevelCrossing(index,i,levelCrossingId[i],mode = 'component',f = f)
-				self.createLevelCrossing(index,i,levelCrossingId[i],mode = 'entity',f = None, example = example)
+			for levelCrossingId in levelCrossingData:
+				index = list(levelCrossingData.keys()).index(levelCrossingId)
+				self.createLevelCrossing(index,levelCrossingId,levelCrossingData[levelCrossingId],mode = 'component',f = f)
+				self.createLevelCrossing(index,levelCrossingId,levelCrossingData[levelCrossingId],mode = 'entity',f = None, example = example)
 		# component singleSwitch  
 		if n_switches > 0:  	
-			self.createSingleSwitch(mode = 'component',f = f)
-			self.createSingleSwitch(mode = 'entity',f = None, example = example)
+			for singleSwitchId in singleSwitchData:
+				index = list(singleSwitchData.keys()).index(singleSwitchId)
+				self.createSingleSwitch(index,singleSwitchId,singleSwitchData[singleSwitchId],mode = 'component',f = f)
+				self.createSingleSwitch(index,singleSwitchId,singleSwitchData[singleSwitchId],mode = 'entity',f = None, example = example)
 		# component singleSwitch  
 		if n_doubleSwitch > 0:  	
 			self.createDoubleSwitch(mode = 'component',f = f)
@@ -2140,69 +2171,129 @@ class ACG():
 			self.createSignal(mode = 'component',f = f)
 			self.createSignal(mode = 'entity',f = None, example = example)
 
-		# component node    	
-		self.createNode(mode = 'component',f = f)
-		self.createNode(mode = 'entity',f = None, example = example)
+		# component node
+		if n_netElements > 0:
+			for netElementId in list(graph.keys()):
+				index = list(graph.keys()).index(netElementId)
+				self.createNode(index,graph[netElementId],mode = 'component',f = f)
+				self.createNode(index,graph[netElementId],mode = 'entity',f = None, example = example)
 
-		# intersignals switches
+		# intersignals
+		levelCrossings = " , ".join([f'state_{i}' for i in list(levelCrossingData.keys())])
+		f.write(f'\n signal {levelCrossings} : levelCrossing_type;\n')
 	
+		singleSwitches = " , ".join([f'state_{i}' for i in list(singleSwitchData.keys())])
+		f.write(f'\n signal {singleSwitches} : sSwitch_type;\n')
+		
+
+		commands = " , ".join([f'cmd_{j}to{i}' for i in singleSwitchData for j in singleSwitchData[i]])
+		f.write(f'\n signal {commands} : std_logic;\r\n')
+
 
 		f.write(f'begin\r\n') 
 
-		print(list(graph.keys()))
-
+		#print(list(graph.keys()))
 
 		# instantiate levelCrossings
 		if n_levelCrossings > 0:
-			for i in levelCrossingId:
-				index = list(levelCrossingId.keys()).index(i)
-				f.write(f'\tlevelCrossing_{i} : levelCrossing_{index} port map(')
+			for levelCrossingId in levelCrossingData:
+				index = list(levelCrossingData.keys()).index(levelCrossingId)
+				f.write(f'\tlevelCrossing_{levelCrossingId} : levelCrossing_{index} port map(')
 				f.write(f'clock => clock, ')
 
-				for element in levelCrossingId[i]:
+				for element in levelCrossingData[levelCrossingId]:
 					netElement = list(graph.keys()).index(element)
 					f.write(f'command_{element} => ocupation({netElement}), ')
 
-				f.write(f'indication => levelCrossings_i({index}), command  => levelCrossings_o({index}), correspondence => OPEN);\r\n')
+				f.write(f'indication => levelCrossings_i({index}), command  => levelCrossings_o({index}), ')
+				f.write(f'correspondence_{levelCrossingId} => state_{levelCrossingId});\r\n')
 		if n_levelCrossings == 1:
-			f.write(f'\tlevelCrossing_0 : levelCrossing port map')
-			f.write(f'(clock => clock, indication => levelCrossings_i, command_in => \'0\' , command_out  => levelCrossings_o, correspondence => OPEN);\r\n')
+			f.write(f'\tlevelCrossing_0 : levelCrossing port map(')
+			f.write(f'clock => clock, indication => levelCrossings_i, command => levelCrossings_o({index}), ')
+			f.write(f'correspondence_{levelCrossingId} => state_{levelCrossingId});\r\n')
 
 		# instantiate singleSwitches
 		if n_switches > 1:
-			for i in range(n_switches):
-				f.write(f'\tsingleSwitch_{i} : singleSwitch port map')
-				f.write(f'(clock => clock, indication => singleSwitches_i({i}), command_in => \'0\' , command_out => singleSwitches_o({i}), correspondence => OPEN);\r\n')
+			for singleSwitchId in singleSwitchData:
+				index = list(singleSwitchData.keys()).index(singleSwitchId)
+				f.write(f'\tsingleSwitch_{singleSwitchId} : singleSwitch_{index} port map(')
+				f.write(f'clock => clock, ')
+
+				for element in singleSwitchData[singleSwitchId]:
+					netElement = list(graph.keys()).index(element)
+					f.write(f'command_{element} => cmd_{element}to{singleSwitchId}, ')
+
+				f.write(f'indication => singleSwitches_i({index}), command => singleSwitches_o({index}), ')
+				f.write(f'correspondence_{singleSwitchId} => state_{singleSwitchId});\r\n')
 		if n_switches == 1:
-			f.write(f'\tsingleSwitch_0 : singleSwitch port map')
-			f.write(f'(clock => clock, indication => singleSwitches_i, command_in => \'0\' , command_out => singleSwitches_o, correspondence => OPEN);\r\n')
-				
+			f.write(f'\tsingleSwitch_0 : singleSwitch port map(')
+			f.write(f'clock => clock, indication => singleSwitches_i, command_in => cmd_{singleSwitchId} , command_out  => singleSwitches_o, ')
+			f.write(f'correspondence_{singleSwitchId} => state_{singleSwitchId});\r\n')
+
 		# instantiate doubleSwitches
 		if n_doubleSwitch > 1:
 			for i in range(n_doubleSwitch):
-				f.write(f'\tdoubleSwitch_{i} : doubleSwitch port map')
-				f.write(f'(clock => clock, indication.msb => doubleSwitches_i.msb({i}), indication.lsb => doubleSwitches_i.lsb({i}), command_in.msb => \'0\',command_in.lsb => \'0\' , command_out.msb => doubleSwitches_o.msb({i}) , command_out.lsb => doubleSwitches_o.lsb({i})  , correspondence.msb => OPEN , correspondence.lsb => OPEN);\r\n')
+				f.write(f'\tdoubleSwitch_{i} : doubleSwitch port map(')
+				f.write(f'clock => clock, indication => doubleSwitches_i({i}), command_in.msb => \'0\',command_in.lsb => \'0\' , command_out. => doubleSwitches_o({i}) , correspondence.msb => OPEN , correspondence.lsb => OPEN);\r\n')
 		if n_doubleSwitch == 1:
-			f.write(f'\tdoubleSwitch_0 : doubleSwitch port map')
-			f.write(f'(clock => clock, indication.msb => doubleSwitches_i.msb, indication.lsb => doubleSwitches_i.lsb, command_in.msb => \'0\',command_in.lsb => \'0\' , command_out.msb => doubleSwitches_o.msb , command_out.lsb => doubleSwitches_o.lsb  , correspondence.msb => OPEN , correspondence.lsb => OPEN);\r\n')
+			f.write(f'\tdoubleSwitch_0 : doubleSwitch port map(')
+			f.write(f'clock => clock, indication => doubleSwitches_i, command_in.msb => \'0\',command_in.lsb => \'0\' , command_out => doubleSwitches_o , correspondence.msb => OPEN , correspondence.lsb => OPEN);\r\n')
 
 		# instantiate signals
+		'''
 		if n_signals > 1:
 			for i in range(n_signals):
-				f.write(f'\trailwaySignal_{i} : railwaySignal port map')
-				f.write(f'(clock => clock, indication.msb => signals_i.msb({i}), indication.lsb => signals_i.lsb({i}), command_in.msb => \'0\',command_in.lsb => \'0\' , command_out.msb => signals_o.msb({i}) , command_out.lsb => signals_o.lsb({i})  , correspondence.msb => OPEN , correspondence.lsb => OPEN);\r\n')
+				f.write(f'\trailwaySignal_{i} : railwaySignal port map(')
+				f.write(f'clock => clock, indication.msb => signals_i.msb({i}), indication.lsb => signals_i.lsb({i}), command_in.msb => \'0\',command_in.lsb => \'0\' , command_out.msb => signals_o.msb({i}) , command_out.lsb => signals_o.lsb({i})  , correspondence.msb => OPEN , correspondence.lsb => OPEN);\r\n')
 		if n_signals == 1:
-			f.write(f'\trailwaySignal_0 : railwaySignal port map')
-			f.write(f'(clock => clock, indication.msb => signals_i.msb, indication.lsb => signals_i.lsb, command_in.msb => \'0\',command_in.lsb => \'0\' , command_out.msb => signals_o.msb , command_out.lsb => signals_o.lsb  , correspondence.msb => OPEN , correspondence.lsb => OPEN);\r\n')
+			f.write(f'\trailwaySignal_0 : railwaySignal port map(')
+			f.write(f'clock => clock, indication.msb => signals_i.msb, indication.lsb => signals_i.lsb, command_in.msb => \'0\',command_in.lsb => \'0\' , command_out.msb => signals_o.msb , command_out.lsb => signals_o.lsb  , correspondence.msb => OPEN , correspondence.lsb => OPEN);\r\n')
+		'''
 
 		# instantiate nodes
 		if n_netElements > 1:
-			for i in range(n_netElements):
-				f.write(f'\tnode_{i} : node port map')
-				f.write(f'(clock => clock, ocupation => ocupation({i}), out_test => OPEN);\r\n')
+			for netElementId in list(graph.keys()):
+				index = list(graph.keys()).index(netElementId)
+				f.write(f'\tnode_{netElementId} : node_{index} port map(')
+				f.write(f'clock => clock, ocupation => ocupation({index}), ')
+				
+				if 'LevelCrossing' in graph[netElementId]:	
+					for levelCrossing in graph[netElementId]['LevelCrossing']:
+						f.write(f'{levelCrossing}_state => state_{levelCrossing}, ')
+
+				if 'Switch' in graph[netElementId]:	
+					for switch in graph[netElementId]['Switch']:
+						f.write(f'command_{switch} => cmd_{netElementId}to{switch}, ')
+						f.write(f'{switch}_state => state_{switch}, ')
+				if 'Switch_B' in graph[netElementId]:	
+					for switch in graph[netElementId]['Switch_B']:
+						f.write(f'command_{switch} => cmd_{netElementId}to{switch}, ')
+						f.write(f'{switch}_state => state_{switch}, ')
+				if 'Switch_C' in graph[netElementId]:	
+					for switch in graph[netElementId]['Switch_C']:
+						f.write(f'command_{switch} => cmd_{netElementId}to{switch}, ')
+						f.write(f'{switch}_state => state_{switch}, ')
+
+				f.write(f'out_test => OPEN);\r\n')
 		if n_netElements == 1:
-			f.write(f'\tnode_0 : node port map')
-			f.write(f'(clock => clock, ocupation => ocupation, out_test => OPEN);\r\n')
+			f.write(f'\tnode_0 : node port map(')
+			f.write(f'clock => clock, ocupation => ocupation, ')
+			if 'LevelCrossing' in graph[0]:	
+				for levelCrossing in graph[0]['LevelCrossing']:
+					f.write(f'{levelCrossing}_state => state_{levelCrossing}., ')
+
+			if 'Switch' in graph[0]:	
+				for switch in graph[0]['Switch']:
+					f.write(f'command_{switch} => cmd_{switch}, ')
+					f.write(f'{switch}_state => state_{switch}, ')
+			if 'Switch_B' in graph[0]:	
+				for switch in graph[0]['Switch_B']:
+					f.write(f'{switch}_state => state_{switch}, ')
+			if 'Switch_C' in graph[0]:	
+				for switch in graph[0]['Switch_C']:
+					f.write(f'{switch}_state => state_{switch}, ')
+					
+			f.write(f'out_test => OPEN);\r\n')
 			
 		f.write(f'end Behavioral;') 
     
@@ -2224,6 +2315,34 @@ class ACG():
 						levelCrossingId[levelCrossing].append(*network[element]['Neighbour'])
 		return levelCrossingId
 
+	def getSingleSwitch(self,network):
+		singleSwitchId = {}
+
+		for element in network:
+			if 'Switch' in network[element]:
+				for switch in network[element]['Switch']:
+					if switch not in singleSwitchId:
+						singleSwitchId[switch] = 3*[None]
+
+					if element not in singleSwitchId[switch]:
+						singleSwitchId[switch][0] = element
+
+			if 'Switch_B' in network[element]:
+				for switch in network[element]['Switch_B']:
+					if switch not in singleSwitchId:
+						singleSwitchId[switch] = 3*[None]
+
+					if element not in singleSwitchId[switch]:
+						singleSwitchId[switch][1] = element
+			if 'Switch_C' in network[element]:
+				for switch in network[element]['Switch_C']:
+					if switch not in singleSwitchId:
+						singleSwitchId[switch] = 3*[None]
+
+					if element not in singleSwitchId[switch]:
+						singleSwitchId[switch][2] = element
+		return singleSwitchId
+
 	def createLevelCrossing(self,index,name,neighbours,mode, f = None,example = 1):	
 		if mode == 'entity':
 			node = f'levelCrossing_{index}'
@@ -2233,7 +2352,7 @@ class ACG():
 			self.initialComment(node,f)
 			
 			# Include library
-			self.includeLibrary(f)
+			self.includeLibrary(f,True)
 		
 		levelCrossing = f'levelCrossing_{index}'
 		f.write(f'\t{mode} {levelCrossing} is\n')
@@ -2243,48 +2362,95 @@ class ACG():
 			f.write(f'\t\t\tcommand_{neighbour} : in std_logic;\n')
 		f.write(f'\t\t\tindication : in std_logic;\n')
 		f.write(f'\t\t\tcommand : out std_logic;\n')
-		f.write(f'\t\t\tcorrespondence : out std_logic\n')
+		f.write(f'\t\t\tcorrespondence_{name} : out levelCrossing_type\n')
 		f.write(f'\t\t);\n')
 		f.write(f'\tend {mode} {levelCrossing};\r\n')
 
+		#	TODO: FIX BEHAVIOUR AND COUNTER
+
 		if mode == 'entity':
+			commands = " or ".join([f'command_{i}' for i in neighbours])
+
 			f.write(f'architecture Behavioral of {node} is\r\n')
 			f.write(f'begin\r\n')
-			commands = " or ".join([f'command_{i}' for i in neighbours])
+
+			f.write(f'\tprocess(clock)\r\n')
+			#f.write(f'\t\tvariable contador: integer := 0;\r\n')
+			f.write(f'\t\tbegin\r\n')
+			f.write(f'\t\t\tif (clock = \'1\' and clock\'Event) then\r\n')
+			#f.write(f'\t\t\t\tcontador := contador + 1;\r\n')
+			#f.write(f'\t\t\t\t\tif contador = 100 then\r\n')
+			#f.write(f'\t\t\t\t\t\tcontador := 0;\r\n') 
+
+			f.write(f'\t\t\t\t\t\tif (({commands}) = indication) then\r\n')
+			f.write(f'\t\t\t\t\t\t\tcorrespondence_{name}.msb <= indication;\r\n')
+			f.write(f'\t\t\t\t\t\t\tcorrespondence_{name}.lsb <= not indication;\r\n')
+			f.write(f'\t\t\t\t\t\telse\r\n')
+			f.write(f'\t\t\t\t\t\t\tcorrespondence_{name}.msb <= \'0\';\r\n')
+			f.write(f'\t\t\t\t\t\t\tcorrespondence_{name}.lsb <= \'0\';\r\n')
+			f.write(f'\t\t\t\t\t\tend if;\r\n')
+			#f.write(f'\t\t\t\t\tend if;\r\n')
+			f.write(f'\t\t\tend if;\r\n')
+			f.write(f'\t\tend process;\r\n') 
+
 			f.write(f'\tcommand <= {commands};\r\n')
-			f.write(f'\tcorrespondence <= indication;\r\n')
+			#f.write(f'\tcorrespondence_{name}.msb <= indication;\r\n')
+			#f.write(f'\tcorrespondence_{name}.lsb <= indication;\r\n')
 
 			f.write(f'end Behavioral;') 
 			f.close()  # Close header file
 
-	def createSingleSwitch(self,mode, f = None,example = 1):
+	def createSingleSwitch(self,index,name,neighbours,mode, f = None,example = 1):
 		if mode == 'entity':
-			node = 'singleSwitch'
+			node = f'singleSwitch_{index}'
 			f = open(f'App/Layouts/Example_{example}/VHDL/{node}.vhd',"w+")
 			
 			# Initial comment
 			self.initialComment(node,f)
 			
 			# Include library
-			self.includeLibrary(f)
+			self.includeLibrary(f,True)
 		
-		singleSwitch = "singleSwitch"
+		singleSwitch = f'singleSwitch_{index}'
 		f.write(f'\t{mode} {singleSwitch} is\n')
 		f.write(f'\t\tport(\n')
 		f.write(f'\t\t\tclock : in std_logic;\n')
+		for neighbour in neighbours:
+			f.write(f'\t\t\tcommand_{neighbour} : in std_logic;\n')
 		f.write(f'\t\t\tindication : in std_logic;\n')
-		f.write(f'\t\t\tcommand_in : in std_logic;\n')
-		f.write(f'\t\t\tcommand_out : out std_logic;\n')
-		f.write(f'\t\t\tcorrespondence : out std_logic\n')
+		f.write(f'\t\t\tcommand : out std_logic;\n')
+		f.write(f'\t\t\tcorrespondence_{name} : out sSwitch_type\n')
 		f.write(f'\t\t);\n')
 		f.write(f'\tend {mode} {singleSwitch};\r\n')
 
 		if mode == 'entity':
+			commands = f'command_{neighbours[0]}'
+
 			f.write(f'architecture Behavioral of {node} is\r\n')
 			f.write(f'begin\r\n')
 
-			f.write(f'\tcommand_out <= command_in;\r\n')
-			f.write(f'\tcorrespondence <= indication;\r\n')
+			f.write(f'\tprocess(clock)\r\n')
+			#f.write(f'\t\tvariable contador: integer := 0;\r\n')
+			f.write(f'\t\tbegin\r\n')
+			f.write(f'\t\t\tif (clock = \'1\' and clock\'Event) then\r\n')
+			#f.write(f'\t\t\t\tcontador := contador + 1;\r\n')
+			#f.write(f'\t\t\t\t\tif contador = 100 then\r\n')
+			#f.write(f'\t\t\t\t\t\tcontador := 0;\r\n') 
+
+			f.write(f'\t\t\t\t\t\tif ({commands} = indication) then\r\n')
+			f.write(f'\t\t\t\t\t\t\tcorrespondence_{name}.msb <= indication;\r\n')
+			f.write(f'\t\t\t\t\t\t\tcorrespondence_{name}.lsb <= not indication;\r\n')
+			f.write(f'\t\t\t\t\t\telse\r\n')
+			f.write(f'\t\t\t\t\t\t\tcorrespondence_{name}.msb <= \'0\';\r\n')
+			f.write(f'\t\t\t\t\t\t\tcorrespondence_{name}.lsb <= \'0\';\r\n')
+			f.write(f'\t\t\t\t\t\tend if;\r\n')
+			#f.write(f'\t\t\t\t\tend if;\r\n')
+			f.write(f'\t\t\tend if;\r\n')
+			f.write(f'\t\tend process;\r\n') 
+
+			f.write(f'\tcommand <= {commands};\r\n')
+			#f.write(f'\tcorrespondence_{name}.msb <= indication;\r\n')
+			#f.write(f'\tcorrespondence_{name}.lsb <= indication;\r\n')
 
 			f.write(f'end Behavioral;') 
 			f.close()  # Close header file
@@ -2353,22 +2519,40 @@ class ACG():
 			f.write(f'end Behavioral;') 
 			f.close()  # Close header file
 
-	def createNode(self,mode, f = None,example = 1):
+	def createNode(self,index,data,mode, f = None,example = 1):
 		if mode == 'entity':
-			node = 'node'
+			node = f'node_{index}'
 			f = open(f'App/Layouts/Example_{example}/VHDL/{node}.vhd',"w+")
 			
 			# Initial comment
 			self.initialComment(node,f)
 			
 			# Include library
-			self.includeLibrary(f)
+			self.includeLibrary(f,True)
 		
-		node = "node"
+		node = f'node_{index}'
 		f.write(f'\t{mode} {node} is\n')
 		f.write(f'\t\tport(\n')
 		f.write(f'\t\t\tclock : in std_logic;\n')
 		f.write(f'\t\t\tocupation : in std_logic;\n')
+	
+		if 'LevelCrossing' in data:	
+			for levelCrossing in data['LevelCrossing']:
+				f.write(f'\t\t\t{levelCrossing}_state : in levelCrossing_type;\n')
+
+		if 'Switch' in data:	
+			for switch in data['Switch']:
+				f.write(f'\t\t\tcommand_{switch} : out std_logic;\n')
+				f.write(f'\t\t\t{switch}_state : in sSwitch_type;\n')
+		if 'Switch_B' in data:	
+			for switch in data['Switch_B']:
+				f.write(f'\t\t\tcommand_{switch} : out std_logic;\n')
+				f.write(f'\t\t\t{switch}_state : in sSwitch_type;\n')
+		if 'Switch_C' in data:	
+			for switch in data['Switch_C']:
+				f.write(f'\t\t\tcommand_{switch} : out std_logic;\n')
+				f.write(f'\t\t\t{switch}_state : in sSwitch_type;\n')
+				
 		f.write(f'\t\t\tout_test : out std_logic\n')
 		f.write(f'\t\t);\n')
 		f.write(f'\tend {mode} {node};\r\n')
@@ -2563,12 +2747,14 @@ class ACG():
 		
 		f.close()  # Close header file   
 	
-	def __init__(self,RML,example = 1):
+	def __init__(self,RML,routes,example = 1):
 		print("#"*50+' Reading railML object '+"#"*50)
 		
 		network = self.create_graph_structure(RML,example)
 		self.print_network(network)
 		
+		print(routes)
+
 		# Enable to plot graph
 		#self.create_graph(RML,network,example)
 
@@ -2581,7 +2767,7 @@ class ACG():
 		print("#"*30+' Creating VHDL files '+"#"*30)
 		
 		print(f'Creating package ... ',end='')
-		self.createPacket(n_signals,n_doubleSwitch,example)
+		self.createPacket(n_switches,n_doubleSwitch,n_levelCrossings,n_signals,example)
 		print(f'Done')
 		
 		print(f'Creating global wrapper ... ',end='')
