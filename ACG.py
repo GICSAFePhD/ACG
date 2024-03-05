@@ -26,11 +26,13 @@ class ACG():
 				network[netElements.Id] = {}
 
 		for netRelations in NetRelations.NetRelation:
-			if netRelations.Navigability != 'None':
+			if netRelations.Navigability != 'None' and netRelations.PositionOnA != None:
 				aux = netRelations.Id.split('_')[1].split('ne')
+				print(aux)
+				#if len(aux) > 3:
 				nodeBegin = 'ne'+aux[1]
 				nodeEnd = 'ne'+aux[2]
-				#print(nodeBegin,nodeEnd)
+				print(nodeBegin,nodeEnd)
 				if 'Neighbour' not in network[nodeBegin]:	
 					network[nodeBegin] |= {'Neighbour':[]}
 				if 'Neighbour' not in network[nodeEnd]:	
@@ -143,7 +145,7 @@ class ACG():
 						network[nodeStart]['Switch_X'].append(SwitchIS.Name[0].Name)
 					if SwitchIS.Name[0].Name not in network[nodeEnd]['Switch_X']:
 						network[nodeEnd]['Switch_X'].append(SwitchIS.Name[0].Name)
-
+		
 		if LevelCrossingsIS != None:  
 			for LevelCrossingIS in LevelCrossingsIS[0].LevelCrossingIS:
 				#print(LevelCrossingIS.SpotLocation[0].NetElementRef,LevelCrossingIS.Name[0].Name)
@@ -2193,24 +2195,15 @@ class ACG():
 		f.write(f'\t\t\tocupation : in std_logic_vector(N_TRACKCIRCUITS-1 downto 0);\n') 
 		f.write(f'\t\t\tsignals_i : in signals_type;\n')
 		f.write(f'\t\t\tsignals_o : out signals_type;\n')
-		if n_routes > 1:
-			f.write(f'\t\t\troutes_i : in std_logic_vector(N_ROUTES-1 downto 0);\n')
-			f.write(f'\t\t\troutes_o : out std_logic_vector(N_ROUTES-1 downto 0);\n')
-		if n_routes == 1:
-			f.write(f'\t\t\troutes_i : in std_logic;\n')
-			f.write(f'\t\t\troutes_o : out std_logic;\n')
-		if n_levelCrossings > 1:
-			f.write(f'\t\t\tlevelCrossings_i : in std_logic_vector(N_LEVELCROSSINGS-1 downto 0);\n')
-			f.write(f'\t\t\tlevelCrossings_o : out std_logic_vector(N_LEVELCROSSINGS-1 downto 0);\n')
-		if n_levelCrossings == 1:
-			f.write(f'\t\t\tlevelCrossings_i : in std_logic;\n')
-			f.write(f'\t\t\tlevelCrossings_o : out std_logic;\n')
-		if n_switches > 1:
-			f.write(f'\t\t\tsingleSwitches_i : in std_logic_vector(N_SINGLESWITCHES-1 downto 0);\n')  
-			f.write(f'\t\t\tsingleSwitches_o : out std_logic_vector(N_SINGLESWITCHES-1 downto 0);\n')
-		if n_switches == 1:
-			f.write(f'\t\t\tsingleSwitches_i : in std_logic;\n')  
-			f.write(f'\t\t\tsingleSwitches_o : out std_logic;\n')
+		if n_routes > 0:
+			f.write(f'\t\t\troutes_i : in std_logic{"_vector(N_ROUTES-1 downto 0)" if n_routes > 1 else ""};\n')
+			f.write(f'\t\t\troutes_o : out std_logic{"_vector(N_ROUTES-1 downto 0)" if n_routes > 1 else ""};\n')
+		if n_levelCrossings > 0:
+			f.write(f'\t\t\tlevelCrossings_i : in std_logic{"_vector(N_LEVELCROSSINGS-1 downto 0)" if n_levelCrossings > 1 else ""};\n')
+			f.write(f'\t\t\tlevelCrossings_o : out std_logic{"_vector(N_LEVELCROSSINGS-1 downto 0)" if n_levelCrossings > 1 else ""};\n')
+		if n_switches > 0:
+			f.write(f'\t\t\tsingleSwitches_i : in std_logic{"_vector(N_SINGLESWITCHES-1 downto 0)" if n_switches > 1 else ""};\n')
+			f.write(f'\t\t\tsingleSwitches_o : out std_logic{"_vector(N_SINGLESWITCHES-1 downto 0)" if n_switches > 1 else ""};\n')
 		if n_doubleSwitch > 0:
 			f.write(f'\t\t\tdoubleSwitches_i : in dSwitches_type;\n')  
 			f.write(f'\t\t\tdoubleSwitches_o : out dSwitches_type;\n')
@@ -2225,6 +2218,10 @@ class ACG():
 		#print(levelCrossingData)
 		singleSwitchData = self.getSingleSwitch(graph,routes)
 		#print(singleSwitchData)
+
+		#TODO: SIGNALS FIRST, DOUBLESWITCH LATER
+
+
 
 		# component levelCrossing  
 		if n_levelCrossings > 0:
@@ -2246,14 +2243,12 @@ class ACG():
 		if n_signals > 0:  	
 			self.createSignal(mode = 'component',f = f)
 			self.createSignal(mode = 'entity',f = None, example = example)
-
 		# component node
 		if n_netElements > 0:
 			for netElementId in list(graph.keys()):
 				index = list(graph.keys()).index(netElementId)
 				self.createNode(index,netElementId,routes,mode = 'component',f = f)
 				self.createNode(index,netElementId,routes,mode = 'entity',f = None, example = example)
-
 		# component route
 		if n_routes > 0:
 			for routeId in list(routes.keys()):
@@ -2282,51 +2277,41 @@ class ACG():
 
 		#print(list(graph.keys()))
 
-		
 		# instantiate levelCrossings
-		if n_levelCrossings > 0:
-			for levelCrossingId in levelCrossingData:
-				index = list(levelCrossingData.keys()).index(levelCrossingId)
-				f.write(f'\tlevelCrossing_{levelCrossingId} : levelCrossing_{index} port map(')
-				f.write(f'clock => clock, ')
+		for levelCrossingId in levelCrossingData:
+			index = list(levelCrossingData.keys()).index(levelCrossingId)
+			f.write(f'\tlevelCrossing_{levelCrossingId} : levelCrossing_{index} port map(')
+			f.write(f'clock => clock, ')
 
-				for element in levelCrossingData[levelCrossingId]['Routes']:
-					f.write(f'{element}_command => cmd_{element}_{levelCrossingId}, ')
+			for element in levelCrossingData[levelCrossingId]['Routes']:
+				f.write(f'{element}_command => cmd_{element}_{levelCrossingId}, ')
 
-				for element in levelCrossingData[levelCrossingId]['Neighbour']:
-					netElement = list(graph.keys()).index(element)
-					f.write(f'ocupation_{element} => ocupation({netElement}), ')
+			for element in levelCrossingData[levelCrossingId]['Neighbour']:
+				netElement = list(graph.keys()).index(element)
+				f.write(f'ocupation_{element} => ocupation({netElement}), ')
 
+			if n_levelCrossings > 1:
 				f.write(f'indication => levelCrossings_i({index}), command  => levelCrossings_o({index}), ')
-				f.write(f'correspondence_{levelCrossingId} => state_{levelCrossingId});\r\n')
-		if n_levelCrossings == 1:
-			f.write(f'\tlevelCrossing_0 : levelCrossing port map(')
-			f.write(f'clock => clock, indication => levelCrossings_i, command => levelCrossings_o({index}), ')
-			f.write(f'correspondence_{levelCrossingId} => state_{levelCrossingId});\r\n')
-		
+			if n_levelCrossings == 1:
+				f.write(f'indication => levelCrossings_i, command  => levelCrossings_o, ')
 
-		
+			f.write(f'correspondence_{levelCrossingId} => state_{levelCrossingId});\r\n')		
+
 		# instantiate singleSwitches
-		if n_switches > 1:
-			for singleSwitchId in singleSwitchData:
-				index = list(singleSwitchData.keys()).index(singleSwitchId)
-				f.write(f'\tsingleSwitch_{singleSwitchId} : singleSwitch_{index} port map(')
-				f.write(f'clock => clock, ')
+		for singleSwitchId in singleSwitchData:
+			index = list(singleSwitchData.keys()).index(singleSwitchId)
+			f.write(f'\tsingleSwitch_{singleSwitchId} : singleSwitch_{index} port map(')
+			f.write(f'clock => clock, ')
 
-				for element in singleSwitchData[singleSwitchId]['Routes']:
-					f.write(f'{element}_command => cmd_{element}_{singleSwitchId}, ')
+			for element in singleSwitchData[singleSwitchId]['Routes']:
+				f.write(f'{element}_command => cmd_{element}_{singleSwitchId}, ')
 
-				#for element in singleSwitchData[singleSwitchId]:
-				#	netElement = list(graph.keys()).index(element)
-				#	f.write(f'command_{element} => cmd_{element}to{singleSwitchId}, ')
-
+			if n_switches > 1:
 				f.write(f'indication => singleSwitches_i({index}), command => singleSwitches_o({index}), ')
-				f.write(f'correspondence_{singleSwitchId} => state_{singleSwitchId});\r\n')
-		if n_switches == 1:
-			f.write(f'\tsingleSwitch_0 : singleSwitch port map(')
-			f.write(f'clock => clock, indication => singleSwitches_i, command_in => cmd_{singleSwitchId} , command_out  => singleSwitches_o, ')
+			if n_switches == 1:
+				f.write(f'indication => singleSwitches_i, command => singleSwitches_o, ')
+
 			f.write(f'correspondence_{singleSwitchId} => state_{singleSwitchId});\r\n')
-		
 
 		'''
 		# instantiate doubleSwitches
@@ -2351,54 +2336,41 @@ class ACG():
 		'''
 
 		# instantiate nodes
-		if n_netElements > 1:
-			for netElementId in list(graph.keys()):
-				index = list(graph.keys()).index(netElementId)
-				f.write(f'\tnode_{netElementId} : node_{index} port map(')
+		for netElementId in list(graph.keys()):
+			index = list(graph.keys()).index(netElementId)
+			f.write(f'\tnode_{netElementId} : node_{index} port map(')
+
+			if n_netElements > 1:
 				f.write(f'clock => clock, ocupation => ocupation({index}), ')
+			if n_netElements == 1:	
+				f.write(f'clock => clock, ocupation => ocupation, ')	
 
-				for route in routes:
-					if netElementId in routes[route]['Path']:
-						f.write(f'R{route}_command => cmd_R{route}_{netElementId}, ')
-				f.write(f'state => state_{netElementId});\r\n')
-		if n_netElements == 1:
-			f.write(f'\tnode_0 : node port map(')
-			f.write(f'clock => clock, ocupation => ocupation, ')
-			if 'LevelCrossing' in graph[0]:	
-				for levelCrossing in graph[0]['LevelCrossing']:
-					f.write(f'{levelCrossing}_state => state_{levelCrossing}., ')
-
-			if 'Switch' in graph[0]:	
-				for switch in graph[0]['Switch']:
-					f.write(f'command_{switch} => cmd_{switch}, ')
-					f.write(f'{switch}_state => state_{switch}, ')
-			if 'Switch_B' in graph[0]:	
-				for switch in graph[0]['Switch_B']:
-					f.write(f'{switch}_state => state_{switch}, ')
-			if 'Switch_C' in graph[0]:	
-				for switch in graph[0]['Switch_C']:
-					f.write(f'{switch}_state => state_{switch}, ')
-					
-			f.write(f'out_test => OPEN);\r\n')
-
+			for route in routes:
+				if netElementId in routes[route]['Path']:
+					f.write(f'R{route}_command => cmd_R{route}_{netElementId}, ')
+			f.write(f'state => state_{netElementId});\r\n')
+	
 		# instantiate routes
-		if n_routes > 1:
-			for routeId in list(routes.keys()):
-				index = list(routes.keys()).index(routeId)
-				f.write(f'\troute_R{routeId} : route_{index} port map(')
-				f.write(f'clock => clock, routeRequest => routes_i({index}), ')
+		for routeId in list(routes.keys()):
+			index = list(routes.keys()).index(routeId)
+			f.write(f'\troute_R{routeId} : route_{index} port map(')
 
-				for netElementId in list(graph.keys()):
-					if netElementId in routes[routeId]['Path']:
-						f.write(f'{netElementId}_command => cmd_R{routeId}_{netElementId}, ')
-						f.write(f'{netElementId}_state => state_{netElementId}, ')
-				for levelCrossingId in routes[routeId]['Crossings']:
-					f.write(f'{levelCrossingId}_command => cmd_R{routeId}_{levelCrossingId}, ')	
-					f.write(f'{levelCrossingId}_state => state_{levelCrossingId}, ')	
-				for singleSwitchId in routes[routeId]['Switches']:
-					f.write(f'{singleSwitchId[:-2]}_command => cmd_R{routeId}_{singleSwitchId[:-2]}, ')	
-					f.write(f'{singleSwitchId[:-2]}_state => state_{singleSwitchId[:-2]}, ')
-				f.write(f'routeState => routes_o({index}));\r\n')
+			if n_routes > 1:
+				f.write(f'clock => clock, routeRequest => routes_i({index}), ')
+			if n_routes == 1:
+				f.write(f'clock => clock, routeRequest => routes_i, ')	
+
+			for netElementId in list(graph.keys()):
+				if netElementId in routes[routeId]['Path']:
+					f.write(f'{netElementId}_command => cmd_R{routeId}_{netElementId}, ')
+					f.write(f'{netElementId}_state => state_{netElementId}, ')
+			for levelCrossingId in routes[routeId]['Crossings']:
+				f.write(f'{levelCrossingId}_command => cmd_R{routeId}_{levelCrossingId}, ')	
+				f.write(f'{levelCrossingId}_state => state_{levelCrossingId}, ')	
+			for singleSwitchId in routes[routeId]['Switches']:
+				f.write(f'{"s" if singleSwitchId[0].isdigit() else ""}{singleSwitchId[:-2]}_command => cmd_R{routeId}_{singleSwitchId[:-2]}, ')	
+				f.write(f'{"s" if singleSwitchId[0].isdigit() else ""}{singleSwitchId[:-2]}_state => state_{singleSwitchId[:-2]}, ')
+			f.write(f'routeState => routes_o({index}));\r\n')
 
 		f.write(f'end Behavioral;') 
     
@@ -2417,7 +2389,8 @@ class ACG():
 						levelCrossingId[levelCrossing]['Neighbour'].append(element)
 
 					if network[element]['Neighbour'] not in levelCrossingId[levelCrossing]['Neighbour']:
-						levelCrossingId[levelCrossing]['Neighbour'].append(*network[element]['Neighbour'])
+						for i in network[element]['Neighbour']:
+							levelCrossingId[levelCrossing]['Neighbour'].append(i)
 
 		for levelCrossing in levelCrossingId:
 			for route in routes:
@@ -2813,8 +2786,8 @@ class ACG():
 			f.write(f'\t\t\t{levelCrossing}_command : out routeCommands;\r\n')	
 
 		for singleSwitch in route['Switches']:
-			f.write(f'\t\t\t{singleSwitch[:-2]}_state : in singleSwitchStates;\r\n')
-			f.write(f'\t\t\t{singleSwitch[:-2]}_command : out routeCommands;\r\n')	
+			f.write(f'\t\t\t{"s" if singleSwitch[0].isdigit() else ""}{singleSwitch[:-2]}_state : in singleSwitchStates;\r\n')
+			f.write(f'\t\t\t{"s" if singleSwitch[0].isdigit() else ""}{singleSwitch[:-2]}_command : out routeCommands;\r\n')	
 				
 		f.write(f'\t\t\trouteState : out std_logic\n')
 		f.write(f'\t\t);\n')
