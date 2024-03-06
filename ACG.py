@@ -28,11 +28,11 @@ class ACG():
 		for netRelations in NetRelations.NetRelation:
 			if netRelations.Navigability != 'None' and netRelations.PositionOnA != None:
 				aux = netRelations.Id.split('_')[1].split('ne')
-				print(aux)
+				#print(aux)
 				#if len(aux) > 3:
 				nodeBegin = 'ne'+aux[1]
 				nodeEnd = 'ne'+aux[2]
-				print(nodeBegin,nodeEnd)
+				#print(nodeBegin,nodeEnd)
 				if 'Neighbour' not in network[nodeBegin]:	
 					network[nodeBegin] |= {'Neighbour':[]}
 				if 'Neighbour' not in network[nodeEnd]:	
@@ -2268,7 +2268,7 @@ class ACG():
 
 		commands = " , ".join([f'cmd_R{i}_{j}' for i in routes for j in routes[i]['Path']])
 		f.write(f'\n signal {commands} : routeCommands;\r')
-		commands = " , ".join([f'cmd_R{i}_{j}' for i in routes for j in routes[i]['Crossings']])
+		commands = " , ".join([f'cmd_R{i}_{j}' for i in routes for j in routes[i]['LevelCrossings']])
 		f.write(f'\n signal {commands} : routeCommands;\r')
 		commands = " , ".join([f'cmd_R{i}_{j[:-2]}' for i in routes for j in routes[i]['Switches']])
 		f.write(f'\n signal {commands} : routeCommands;\r\n')
@@ -2364,7 +2364,7 @@ class ACG():
 				if netElementId in routes[routeId]['Path']:
 					f.write(f'{netElementId}_command => cmd_R{routeId}_{netElementId}, ')
 					f.write(f'{netElementId}_state => state_{netElementId}, ')
-			for levelCrossingId in routes[routeId]['Crossings']:
+			for levelCrossingId in routes[routeId]['LevelCrossings']:
 				f.write(f'{levelCrossingId}_command => cmd_R{routeId}_{levelCrossingId}, ')	
 				f.write(f'{levelCrossingId}_state => state_{levelCrossingId}, ')	
 			for singleSwitchId in routes[routeId]['Switches']:
@@ -2394,7 +2394,7 @@ class ACG():
 
 		for levelCrossing in levelCrossingId:
 			for route in routes:
-				if levelCrossing in routes[route]['Crossings']:
+				if levelCrossing in routes[route]['LevelCrossings']:
 					if 'Routes' not in levelCrossingId[levelCrossing]:
 						levelCrossingId[levelCrossing] |= {'Routes':[]}
 					if route not in levelCrossingId[levelCrossing]['Routes']:
@@ -2554,7 +2554,7 @@ class ACG():
 		commands_N = []
 		commands_R = []
 		for element in range(len(data['Routes'])):
-			f.write(f'\t\t\t{data['Routes'][element]}_command : in routeCommands;\r\n')
+			f.write(f'\t\t\t{data['Routes'][element]}_command : in routeCommands;\n')
 			commands.append(data['Routes'][element])
 			if data['Position'][element] == 'N':
 				commands_N.append(data['Routes'][element])
@@ -2580,59 +2580,59 @@ class ACG():
 			lockState_N = " or ".join([f'{i}_command = LOCK' for i in commands_N])
 			lockState_R = " or ".join([f'{i}_command = LOCK' for i in commands_R])
 
-			f.write(f'architecture Behavioral of {node} is\r\n')
-			f.write(f'signal command_aux : std_logic;\r\n')
-			f.write(f'begin\r\n')
+			f.write(f'architecture Behavioral of {node} is\n')
+			f.write(f'signal command_aux : std_logic;\n')
+			f.write(f'begin\n')
 
-			f.write(f'\tprocess(clock)\r\n')
-			f.write(f'\tbegin\r\n')
-			f.write(f'\t\tif (clock = \'1\' and clock\'Event) then\r\n')
-			f.write(f'\t\t\tif ({freeState}) then\r\n')
-			f.write(f'\t\t\t\tcommand_aux <= indication;\r\n')
-			f.write(f'\t\t\telse\r\n')
-			f.write(f'\t\t\t\tif (({reserveState_N}) and ({freeState_R})) then\r\n')
-			f.write(f'\t\t\t\t\tcommand_aux <= \'0\';\r\n')
-			f.write(f'\t\t\t\tend if;\r\n')
-			f.write(f'\t\t\t\tif (({freeState_N}) and ({reserveState_R})) then\r\n')
-			f.write(f'\t\t\t\t\tcommand_aux <= \'1\';\r\n')
-			f.write(f'\t\t\t\tend if;\r\n')
-			f.write(f'\t\t\t\tif (({lockState_N}) and ({freeState_R})) then\r\n')
-			f.write(f'\t\t\t\t\tcommand_aux <= \'0\';\r\n')
-			f.write(f'\t\t\t\tend if;\r\n')
-			f.write(f'\t\t\t\tif (({freeState_N}) and ({lockState_R})) then\r\n')
-			f.write(f'\t\t\t\t\tcommand_aux <= \'1\';\r\n')
-			f.write(f'\t\t\t\tend if;\r\n')
-			f.write(f'\t\t\tend if;\r\n')
-			f.write(f'\t\tend if;\r\n')
-			f.write(f'\tend process;\r\n') 
+			f.write(f'\tprocess(clock)\n')
+			f.write(f'\tbegin\n')
+			f.write(f'\t\tif (clock = \'1\' and clock\'Event) then\n')
+			f.write(f'\t\t\tif ({freeState}) then\n')
+			f.write(f'\t\t\t\tcommand_aux <= indication;\n')
+			f.write(f'\t\t\telse\n')
+			f.write(f'\t\t\t\tif (({reserveState_N}) and ({freeState_R})) then\n')
+			f.write(f'\t\t\t\t\tcommand_aux <= \'0\';\n')
+			f.write(f'\t\t\t\tend if;\n')
+			f.write(f'\t\t\t\tif (({freeState_N}) and ({reserveState_R})) then\n')
+			f.write(f'\t\t\t\t\tcommand_aux <= \'1\';\n')
+			f.write(f'\t\t\t\tend if;\n')
+			f.write(f'\t\t\t\tif (({lockState_N}) and ({freeState_R})) then\n')
+			f.write(f'\t\t\t\t\tcommand_aux <= \'0\';\n')
+			f.write(f'\t\t\t\tend if;\n')
+			f.write(f'\t\t\t\tif (({freeState_N}) and ({lockState_R})) then\n')
+			f.write(f'\t\t\t\t\tcommand_aux <= \'1\';\n')
+			f.write(f'\t\t\t\tend if;\n')
+			f.write(f'\t\t\tend if;\n')
+			f.write(f'\t\tend if;\n')
+			f.write(f'\tend process;\n') 
 
 			
-			f.write(f'\tprocess(clock)\r\n')
-			f.write(f'\tbegin\r\n')
-			f.write(f'\t\tif (clock = \'1\' and clock\'Event) then\r\n')
-			f.write(f'\t\t\tif ({freeState}) then\r\n')
-			f.write(f'\t\t\t\tif (command_aux = \'0\' and indication = \'0\') then\r\n')
-			f.write(f'\t\t\t\t\tcorrespondence_{name} <= NORMAL;\r\n')
-			f.write(f'\t\t\t\tend if;\r\n')
-			f.write(f'\t\t\t\tif (command_aux = \'1\' and indication = \'1\') then\r\n')
-			f.write(f'\t\t\t\t\tcorrespondence_{name} <= REVERSE;\r\n')
-			f.write(f'\t\t\t\tend if;\r\n')
-			f.write(f'\t\t\t\tif ((command_aux = \'0\' and indication = \'1\') or (command_aux = \'1\' and indication = \'0\')) then\r\n')
-			f.write(f'\t\t\t\t\tcorrespondence_{name} <= TRANSITION;\r\n')
-			f.write(f'\t\t\t\tend if;\r\n')
-			f.write(f'\t\t\telse\r\n')
-			f.write(f'\t\t\t\tif ({reserveState}) then\r\n')
-			f.write(f'\t\t\t\t\tcorrespondence_{name} <= RESERVED;\r\n')
-			f.write(f'\t\t\t\tend if;\r\n')
-			f.write(f'\t\t\t\tif ({lockState}) then\r\n')
-			f.write(f'\t\t\t\t\tcorrespondence_{name} <= LOCKED;\r\n')
-			f.write(f'\t\t\t\tend if;\r\n')
-			f.write(f'\t\t\tend if;\r\n')
-			f.write(f'\t\tend if;\r\n')
-			f.write(f'\tend process;\r\n') 
+			f.write(f'\tprocess(clock)\n')
+			f.write(f'\tbegin\n')
+			f.write(f'\t\tif (clock = \'1\' and clock\'Event) then\n')
+			f.write(f'\t\t\tif ({freeState}) then\n')
+			f.write(f'\t\t\t\tif (command_aux = \'0\' and indication = \'0\') then\n')
+			f.write(f'\t\t\t\t\tcorrespondence_{name} <= NORMAL;\n')
+			f.write(f'\t\t\t\tend if;\n')
+			f.write(f'\t\t\t\tif (command_aux = \'1\' and indication = \'1\') then\n')
+			f.write(f'\t\t\t\t\tcorrespondence_{name} <= REVERSE;\n')
+			f.write(f'\t\t\t\tend if;\n')
+			f.write(f'\t\t\t\tif ((command_aux = \'0\' and indication = \'1\') or (command_aux = \'1\' and indication = \'0\')) then\n')
+			f.write(f'\t\t\t\t\tcorrespondence_{name} <= TRANSITION;\n')
+			f.write(f'\t\t\t\tend if;\n')
+			f.write(f'\t\t\telse\n')
+			f.write(f'\t\t\t\tif ({reserveState}) then\n')
+			f.write(f'\t\t\t\t\tcorrespondence_{name} <= RESERVED;\n')
+			f.write(f'\t\t\t\tend if;\n')
+			f.write(f'\t\t\t\tif ({lockState}) then\n')
+			f.write(f'\t\t\t\t\tcorrespondence_{name} <= LOCKED;\n')
+			f.write(f'\t\t\t\tend if;\n')
+			f.write(f'\t\t\tend if;\n')
+			f.write(f'\t\tend if;\n')
+			f.write(f'\tend process;\n') 
 			
 
-			f.write(f'\tcommand <= command_aux;\r\n')
+			f.write(f'\tcommand <= command_aux;\n')
 			f.write(f'end Behavioral;') 
 			f.close()  # Close header file
 
@@ -2781,7 +2781,7 @@ class ACG():
 			f.write(f'\t\t\t{netElement}_state : in nodeStates;\r\n')
 			f.write(f'\t\t\t{netElement}_command : out routeCommands;\r\n')	
 	
-		for levelCrossing in route['Crossings']:
+		for levelCrossing in route['LevelCrossings']:
 			f.write(f'\t\t\t{levelCrossing}_state : in levelCrossingStates;\r\n')
 			f.write(f'\t\t\t{levelCrossing}_command : out routeCommands;\r\n')	
 
@@ -2987,11 +2987,11 @@ class ACG():
 		print("#"*50+' Reading railML object '+"#"*50)
 		
 		network = self.create_graph_structure(RML,example)
-		self.print_network(network)
+		#self.print_network(network)
 		
 		n_routes = len(routes)
-		for route in routes:
-			print('R'+str(route),routes[route])
+		#for route in routes:
+		#	print('R'+str(route),routes[route])
 
 		# Enable to plot graph
 		#self.create_graph(RML,network,example)
