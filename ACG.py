@@ -334,6 +334,13 @@ class ACG():
 
 	def calculate_parameters(self,network,example = 1):
 
+		# TODO FIX COUNTER! SWITCHES ARE UNDERCOUNTED AND DOUBLE ARE OVERCOUNTED!
+
+		singleSwitches = []
+		doubleSwitches = []
+		scrissorCrossings = []
+		platforms = []
+
 		n_netElements = len(network)
 		n_switches = 0
 		n_doubleSwitch = 0
@@ -341,7 +348,7 @@ class ACG():
 		n_buffers = 0
 		n_levelCrossings = 0
 		n_platforms = 0
-		n_crossings = 0
+		n_scissorCrossings = 0
 		n_signals_1 = 0
 		n_signals_2 = 0
 		n_signals_3 = 0
@@ -356,10 +363,14 @@ class ACG():
 
 		for element in network:
 			if "Switch" in network[element]:
-				n_switches = n_switches + 1
+				for singleSwitch in network[element]['Switch']:
+					if singleSwitch not in singleSwitches:
+						singleSwitches.append(singleSwitch)
 
 			if 'Switch_X' in network[element]:
-				n_doubleSwitch = n_doubleSwitch + 1
+				for doubleSwitch in network[element]['Switch_X']:
+					if doubleSwitch not in doubleSwitches:
+						doubleSwitches.append(doubleSwitch)
 				
 			if 'Border' in network[element]:
 				n_borders = n_borders + 1
@@ -371,10 +382,14 @@ class ACG():
 				n_levelCrossings = n_levelCrossings + 1
 
 			if 'Platform' in network[element]:
-				n_platforms = n_platforms + 1
+				for platform in network[element]['Platform']:
+					if platform not in platforms:
+						platforms.append(platform)
 
 			if 'Crossing' in network[element]:
-				n_crossings = n_crossings + 1
+				for scrissorCrossing in network[element]['Crossing']:
+					if scrissorCrossing not in scrissorCrossings:
+						scrissorCrossings.append(scrissorCrossing)
 
 			if 'Signal' in network[element]:
 				for signal in network[element]['Signal']:
@@ -395,19 +410,24 @@ class ACG():
 					if 'J' in signal:
 						n_signals_J = n_signals_J + 1
 
+		n_switches = len(singleSwitches)
+		n_doubleSwitch = len(doubleSwitches)
+		n_scissorCrossings = len(scrissorCrossings)
+		n_platforms = len(platforms)
+
 		n_signals_1 = 0
 		n_signals_2 = n_signals_T + n_signals_B + n_signals_P
 		n_signals_3 = n_signals_S + n_signals_C + n_signals_L + n_signals_X + n_signals_J
 
-		N = n_netElements + n_switches + 2*n_doubleSwitch + n_levelCrossings + 2*n_signals_2 + 2*n_signals_3
+		N = n_netElements + n_switches + 2*n_doubleSwitch + n_scissorCrossings + n_levelCrossings + 2*n_signals_2 + 2*n_signals_3
 		M = N - n_netElements
 
-		print(f'n_netElements:{n_netElements}\nn_switch:{n_switches}\nn_doubleSwitch:{n_doubleSwitch}\nn_borders:{n_borders}\nn_buffers:{n_buffers}\nn_levelCrossings:{n_levelCrossings}\nn_platforms:{n_platforms}\nn_crossings:{n_crossings}\nn_signals_1:{n_signals_1}\nn_signals_2:{n_signals_2}\nn_signals_3:{n_signals_3}')
+		print(f'n_netElements:{n_netElements}\nn_switch:{n_switches}\nn_doubleSwitch:{n_doubleSwitch}\nn_borders:{n_borders}\nn_buffers:{n_buffers}\nn_levelCrossings:{n_levelCrossings}\nn_platforms:{n_platforms}\nn_scissorCrossings:{n_scissorCrossings}\nn_signals:{n_signals_1+n_signals_2+n_signals_3}')
 
 
-		return N,M,n_netElements,n_switches,n_doubleSwitch,n_levelCrossings,n_signals_1,n_signals_2,n_signals_3
+		return N,M,n_netElements,n_switches,n_doubleSwitch,n_scissorCrossings,n_levelCrossings,n_signals_1,n_signals_2,n_signals_3
 
-	def createPacket(self,n_switches,n_doubleSwitch,n_levelCrossings,n_signals,example = 1):
+	def createPacket(self,n_switches,n_doubleSwitch,n_scissorCrossings,n_levelCrossings,n_signals,example = 1):
 		node = 'my_package'
 				
 		f = open(f'App/Layouts/Example_{example}/VHDL/{node}.vhd',"w+")
@@ -453,6 +473,20 @@ class ACG():
 			f.write(f'\t\ttype {type} is record\n')
 			f.write(f'\t\t\tmsb : std_logic_vector({n_doubleSwitch}-1 downto 0);\n')
 			f.write(f'\t\t\tlsb : std_logic_vector({n_doubleSwitch}-1 downto 0);\n')
+			f.write(f'\t\tend record {type};\n')
+
+		if n_scissorCrossings > 0:		
+			type = 'scrissorCrossing_type'
+			f.write(f'\t\ttype {type} is record\n')
+			f.write(f'\t\t\tmsb : std_logic;\n')
+			f.write(f'\t\t\tlsb : std_logic;\n')
+			f.write(f'\t\tend record {type};\n')
+		
+		if n_scissorCrossings > 1:
+			type = 'scrissorCrossings_type'
+			f.write(f'\t\ttype {type} is record\n')
+			f.write(f'\t\t\tmsb : std_logic_vector({n_scissorCrossings}-1 downto 0);\n')
+			f.write(f'\t\t\tlsb : std_logic_vector({n_scissorCrossings}-1 downto 0);\n')
 			f.write(f'\t\tend record {type};\n')
 
 		if n_levelCrossings >0:
@@ -1623,7 +1657,7 @@ class ACG():
 
 		f.close()  # Close header file
 
-	def createInterlocking(self,N,M,n_netElements,n_routes,n_switches,n_doubleSwitch,n_levelCrossings,n_signals,example = 1):
+	def createInterlocking(self,N,M,n_netElements,n_routes,n_switches,n_doubleSwitch,n_scissorCrossings,n_levelCrossings,n_signals,example = 1):
 		node = 'interlocking'
 		f = open(f'App/Layouts/Example_{example}/VHDL/{node}.vhd',"w+")
 		
@@ -1645,6 +1679,8 @@ class ACG():
 			f.write(f'\t\t\tN_SINGLESWITCHES : natural := {str(n_switches)};\n')
 		if n_doubleSwitch > 0:         
 			f.write(f'\t\t\tN_DOUBLEWITCHES : natural := {str(n_doubleSwitch)};\n')
+		if n_scissorCrossings > 0:         
+			f.write(f'\t\t\tN_SCISSORCROSSINGS : natural := {str(n_scissorCrossings)};\n')
 		f.write(f'\t\t\tN_TRACKCIRCUITS : natural := {str(n_netElements)}\n')
 		f.write(f'\t\t);\n')
 		f.write(f'\t\tport(\n')
@@ -1673,6 +1709,8 @@ class ACG():
 			f.write(f'\t\t\tN_SINGLESWITCHES : natural := {str(n_switches)};\n')
 		if n_doubleSwitch > 0:         
 			f.write(f'\t\t\tN_DOUBLESWITCHES : natural := {str(n_doubleSwitch)};\n')
+		if n_scissorCrossings > 0:         
+			f.write(f'\t\t\tN_SCISSORCROSSINGS : natural := {str(n_scissorCrossings)};\n')
 		f.write(f'\t\t\tN_TRACKCIRCUITS : natural := {str(n_netElements)}\n')
 		f.write(f'\t\t);\n')
 		f.write(f'\t\tport(\n')
@@ -1698,6 +1736,10 @@ class ACG():
 			f.write(f'\t\t\tdoubleSwitches :  out std_logic_vector(N_DOUBLESWITCHES-1 downto 0);\n')    
 		if n_doubleSwitch == 1:
 			f.write(f'\t\t\tdoubleSwitches :  out std_logic;\n')
+		if n_scissorCrossings > 1:
+			f.write(f'\t\t\tscissorCrossings :  out std_logic_vector(N_SCISSORCROSSINGS-1 downto 0);\n')    
+		if n_scissorCrossings == 1:
+			f.write(f'\t\t\tscissorCrossings :  out std_logic;\n')
 		f.write(f'\t\t\treset :  in std_logic\n')    
 		f.write(f'\t\t);\n')
 		f.write(f'\tend component {splitter};\r\n')
@@ -1717,6 +1759,8 @@ class ACG():
 			f.write(f'\t\t\tN_SINGLESWITCHES : natural := {str(n_switches)};\n')
 		if n_doubleSwitch > 0:    
 			f.write(f'\t\t\tN_DOUBLEWITCHES : natural := {str(n_doubleSwitch)};\n')
+		if n_scissorCrossings > 0:    
+			f.write(f'\t\t\tN_SCISSORCROSSINGS : natural := {str(n_scissorCrossings)};\n')
 		f.write(f'\t\t\tN_TRACKCIRCUITS : natural := {str(n_netElements)}\n')
 		f.write(f'\t\t);\n')
 		f.write(f'\t\tport(\n')
@@ -1744,10 +1788,18 @@ class ACG():
 		if n_switches == 1:
 			f.write(f'\t\t\tsingleSwitches_i : in std_logic;\n')  
 			f.write(f'\t\t\tsingleSwitches_o : out std_logic;\n')
+
 		if n_doubleSwitch > 0:
 			f.write(f'\t\t\tdoubleSwitches_i : in dSwitches_type;\n')  
 			f.write(f'\t\t\tdoubleSwitches_o : out dSwitches_type;\n')
-			
+
+		if n_scissorCrossings > 1:
+			f.write(f'\t\t\tscrissorCrossings_i : in std_logic_vector(N_SCISSORCROSSINGS-1 downto 0);\n')  
+			f.write(f'\t\t\tscrissorCrossings_o : out std_logic_vector(N_SCISSORCROSSINGS-1 downto 0);\n')
+		if n_scissorCrossings == 1:
+			f.write(f'\t\t\tscrissorCrossings_i : in std_logic;\n')  
+			f.write(f'\t\t\tscrissorCrossings_o : out std_logic;\n')
+	
 		f.write(f'\t\t\treset : in std_logic\n')
 		f.write(f'\t\t);\n')
 		f.write(f'\tend component {network};\r\n')
@@ -1767,6 +1819,9 @@ class ACG():
 			f.write(f'\t\t\tN_SINGLESWITCHES : natural := {str(n_switches)};\n')
 		if n_doubleSwitch > 0:
 			f.write(f'\t\t\tN_DOUBLESWITCHES : natural := {str(n_doubleSwitch)};\n')
+		if n_scissorCrossings > 0:
+			f.write(f'\t\t\tN_SCISSORCROSSINGS : natural := {str(n_scissorCrossings)};\n')
+
 		f.write(f'\t\t\tN_TRACKCIRCUITS : natural := {str(n_netElements)}\n')    
 		f.write(f'\t\t);\n')
 		f.write(f'\t\tport(\n')
@@ -1786,6 +1841,11 @@ class ACG():
 			f.write(f'\t\t\tsingleSwitches : in std_logic_vector(N_SINGLESWITCHES-1 downto 0);\n')
 		if n_switches == 1:
 			f.write(f'\t\t\tsingleSwitches : in std_logic;\n')
+		if n_scissorCrossings > 1:
+			f.write(f'\t\t\tscissorCrossings : in std_logic_vector(N_SCISSORCROSSINGS-1 downto 0);\n')
+		if n_scissorCrossings == 1:
+			f.write(f'\t\t\tscissorCrossings : in std_logic;\n')
+
 		if n_doubleSwitch > 0:
 			f.write(f'\t\t\tdoubleSwitches : in dSwitches_type;\n')
 		f.write(f'\t\t\toutput : out std_logic_vector({str(M)}-1 downto 0);\n')
@@ -1807,23 +1867,27 @@ class ACG():
 			f.write(f'\tSignal ssw_s_i,ssw_s_o : std_logic_vector({str(n_switches)}-1 downto 0);\n')
 		if n_switches == 1:
 			f.write(f'\tSignal ssw_s_i,ssw_s_o : std_logic;\n')
+		if n_scissorCrossings > 1:
+			f.write(f'\tSignal sc_s_i,sc_s_o : std_logic_vector({str(n_scissorCrossings)}-1 downto 0);\n')
+		if n_scissorCrossings == 1:
+			f.write(f'\tSignal sc_s_i,sc_s_o : std_logic;\n')
 		if n_doubleSwitch > 0:
 			f.write(f'\tSignal dsw_s_i,dsw_s_o : dSwitches_type;\n')
 		f.write(f'\tSignal process_spt_int, process_int_med : std_logic;\n')
 		
 		f.write(f'\nbegin\r\n')  
 		
-		self.instantiateSplitter(f,splitter,n_routes,n_switches,n_doubleSwitch,n_levelCrossings)
+		self.instantiateSplitter(f,splitter,n_routes,n_switches,n_doubleSwitch,n_scissorCrossings,n_levelCrossings)
 		
-		self.instantiateMediator(f,mediator,n_routes,n_switches,n_doubleSwitch,n_levelCrossings)
+		self.instantiateMediator(f,mediator,n_routes,n_switches,n_doubleSwitch,n_scissorCrossings,n_levelCrossings)
 		
-		self.instantiateNetwork(f,network,n_routes,n_switches,n_doubleSwitch,n_levelCrossings)
+		self.instantiateNetwork(f,network,n_routes,n_switches,n_doubleSwitch,n_scissorCrossings,n_levelCrossings)
 		
 		f.write(f'end Behavioral;') 
 		
 		f.close()  # Close header file
 
-	def instantiateSplitter(self,f,name,n_routes,n_switches,n_doubleSwitch,n_levelCrossings):
+	def instantiateSplitter(self,f,name,n_routes,n_switches,n_doubleSwitch,n_scissorCrossings,n_levelCrossings):
     		
 		# instantiate splitter
 		f.write(f'\t{name}_i : {name} port map(\n')
@@ -1844,11 +1908,12 @@ class ACG():
 			f.write(f'\t\tsingleSwitches => ssw_s_i,\n')
 		if n_doubleSwitch > 0:    
 			f.write(f'\t\tdoubleSwitches => dsw_s_i,\n')
-
+		if n_scissorCrossings > 0:    
+			f.write(f'\t\tscissorCrossings => sc_s_i,\n')
 		f.write(f'\t\treset => reset\n')    
 		f.write(f'\t\t);\r\n')
 
-	def instantiateMediator(self,f,name,n_routes,n_switches,n_doubleSwitch,n_levelCrossings):
+	def instantiateMediator(self,f,name,n_routes,n_switches,n_doubleSwitch,n_scissorCrossings,n_levelCrossings):
     		
     	# instantiate mediator
 		f.write(f'\t{name}_i : {name} port map(\n')
@@ -1866,12 +1931,14 @@ class ACG():
 			f.write(f'\t\tsingleSwitches => ssw_s_o,\n')
 		if n_doubleSwitch > 0:    
 			f.write(f'\t\tdoubleSwitches => dsw_s_o,\n')
-				
+		if n_scissorCrossings > 0:    
+			f.write(f'\t\tscissorCrossings => sc_s_o,\n')
+
 		f.write(f'\t\toutput => packet_o,\n')
 		f.write(f'\t\treset => reset\n')    
 		f.write(f'\t\t);\r\n')
 
-	def instantiateNetwork(self,f,name,n_routes,n_switches,n_doubleSwitch,n_levelCrossings):
+	def instantiateNetwork(self,f,name,n_routes,n_switches,n_doubleSwitch,n_scissorCrossings,n_levelCrossings):
     		
     	# instantiate network
 		f.write(f'\t{name}_i : {name} port map(\n')
@@ -1895,12 +1962,15 @@ class ACG():
 		if n_doubleSwitch > 0:    
 			f.write(f'\t\tdoubleSwitches_i => dsw_s_i,\n')
 			f.write(f'\t\tdoubleSwitches_o => dsw_s_o,\n') 
+		if n_scissorCrossings > 0:    
+			f.write(f'\t\tscrissorCrossings_i => sc_s_i,\n')
+			f.write(f'\t\tscrissorCrossings_o => sc_s_o,\n')
 
 		f.write(f'\t\treset => reset\n')
 		
 		f.write(f'\t\t);\r\n')
 
-	def createSplitter(self,N,n_netElements,n_routes,n_signals,n_switches,n_doubleSwitch,n_levelCrossings,example = 1):
+	def createSplitter(self,N,n_netElements,n_routes,n_signals,n_switches,n_doubleSwitch,n_scissorCrossings,n_levelCrossings,example = 1):
 		node = 'splitter'
 		f = open(f'App/Layouts/Example_{example}/VHDL/{node}.vhd',"w+")
 		
@@ -1922,6 +1992,8 @@ class ACG():
 			f.write(f'\t\t\tN_SINGLESWITCHES : natural := {str(n_switches)};\n')
 		if n_doubleSwitch > 0:         
 			f.write(f'\t\t\tN_DOUBLEWITCHES : natural := {str(n_doubleSwitch)};\n')
+		if n_scissorCrossings > 0:         
+			f.write(f'\t\t\tN_SCRISSORCROSSINGS : natural := {str(n_scissorCrossings)};\n')
 		if n_routes > 0:         
 			f.write(f'\t\t\tN_ROUTES : natural := {str(n_routes)};\n')
 		f.write(f'\t\t\tN_TRACKCIRCUITS : natural := {str(n_netElements)}\n')
@@ -1946,6 +2018,10 @@ class ACG():
 			f.write(f'\t\t\tsingleSwitches : out std_logic_vector(N_SINGLESWITCHES-1 downto 0);\n')  
 		if n_switches == 1:
 			f.write(f'\t\t\tsingleSwitches : out std_logic;\n')  
+		if n_scissorCrossings > 1:
+			f.write(f'\t\t\tscissorSwitches : out std_logic_vector(N_SCRISSORCROSSINGS-1 downto 0);\n')  
+		if n_scissorCrossings == 1:
+			f.write(f'\t\t\tscissorSwitches : out std_logic;\n')
 		if n_doubleSwitch > 0:
 			f.write(f'\t\t\tdoubleSwitches : out dSwitches_type;\n') 
 		f.write(f'\t\t\treset : in std_logic\n')
@@ -1968,11 +2044,15 @@ class ACG():
 			f.write(f'\tSignal ssw_s_i,ssw_s_o : std_logic_vector({str(n_switches)}-1 downto 0);\n')
 		if n_switches == 1:
 			f.write(f'\tSignal ssw_s_i,ssw_s_o : std_logic;\n')
+		if n_scissorCrossings > 1:
+			f.write(f'\tSignal sc_s_i,sc_s_o : std_logic_vector({str(n_scissorCrossings)}-1 downto 0);\n')
+		if n_scissorCrossings == 1:
+			f.write(f'\tSignal sc_s_i,sc_s_o : std_logic;\n')
 		if n_doubleSwitch > 0:
 			f.write(f'\tSignal dsw_s_i,dsw_s_o : dSwitches_type;\n')
 		f.write(f'begin\r\n')  
 		
-		# Ocupation | Routes | signals | levelCrossings | singleSwitch | doubleSwitch 
+		# Ocupation | Routes | signals | levelCrossings | singleSwitches | doubleSwitches | scissorCrossinges
 
 		f.write(f'\tprocess(clock,reset)\n')
 		f.write(f'\tbegin\n')
@@ -1993,6 +2073,10 @@ class ACG():
 			f.write(f'\t\t\t\tsingleSwitches <= "{str('0'*n_switches)}";\n')
 		if n_switches == 1:
 			f.write(f'\t\t\t\tsingleSwitches <= \'0\';\n')
+		if n_scissorCrossings > 1:
+			f.write(f'\t\t\t\tscissorSwitches <= "{str('0'*n_scissorCrossings)}";\n')
+		if n_scissorCrossings == 1:
+			f.write(f'\t\t\t\tscissorSwitches <= \'0\';\n')
 		if n_doubleSwitch > 0:
 			f.write(f'\t\t\t\tdoubleSwitches.lsb <= "{str('0'*n_doubleSwitch)}";\n')
 			f.write(f'\t\t\t\tdoubleSwitches.msb <= "{str('0'*n_doubleSwitch)}";\n')
@@ -2027,8 +2111,6 @@ class ACG():
 		if n_switches == 1:
 			f.write(f'\t\t\t\t\tsingleSwitches <= packet({str(N-1-n_routes-n_netElements-2*n_signals-n_levelCrossings-1)});\n')
 		
-		
-		#TODO: MSB LSB AS THE SIGNALS!!!!
 		if n_doubleSwitch > 0:
 			for i in range(2*n_doubleSwitch):
 				if i%2:
@@ -2037,6 +2119,12 @@ class ACG():
 				else:
 					#print ('MSB: {}'.format(i+1))
 					f.write(f'\t\t\t\t\tdoubleSwitches.msb({str(int(i/2))}) <= packet({str(N-1-n_routes-n_netElements-2*n_signals-n_levelCrossings-n_switches-i)});\n')
+
+		if n_scissorCrossings > 1:
+			for i in range(n_scissorCrossings):
+				f.write(f'\t\t\t\t\tscissorCrossings({str(i)}) <= packet({str(N-1-n_routes-n_netElements-2*n_signals-n_levelCrossings-n_switches-2*n_doubleSwitch-i)});\n')
+		if n_scissorCrossings == 1:
+			f.write(f'\t\t\t\t\tscissorCrossings <= packet({str(N-1-n_routes-n_netElements-2*n_signals-n_levelCrossings-n_switches-2*n_doubleSwitch-1)});\n')
 
 		f.write(f'\t\t\t\tend if;\n')    
 		f.write(f'\t\t\tend if;\n')
@@ -2047,7 +2135,7 @@ class ACG():
 		
 		f.close()  # Close header file 
 
-	def createMediator(self,N,M,n_netElements,n_routes,n_signals,n_switches,n_doubleSwitch,n_levelCrossings,example = 1):
+	def createMediator(self,N,M,n_netElements,n_routes,n_signals,n_switches,n_doubleSwitch,n_scissorCrossings,n_levelCrossings,example = 1):
 		node = 'mediator'
 		f = open(f'App/Layouts/Example_{example}/VHDL/{node}.vhd',"w+")
 		
@@ -2072,6 +2160,8 @@ class ACG():
 			f.write(f'\t\t\tN_SINGLESWITCHES : natural := {str(n_switches)};\n')
 		if n_doubleSwitch > 0:
 			f.write(f'\t\t\tN_DOUBLESWITCHES : natural := {str(n_doubleSwitch)};\n')
+		if n_scissorCrossings > 0:
+			f.write(f'\t\t\tN_SCISSORCROSSINGS : natural := {str(n_scissorCrossings)};\n')
 		f.write(f'\t\t\tN_TRACKCIRCUITS : natural := {str(n_netElements)}\n')    
 		f.write(f'\t\t);\n')
 		f.write(f'\t\tport(\n')
@@ -2091,6 +2181,10 @@ class ACG():
 			f.write(f'\t\t\tsingleSwitches : in std_logic_vector(N_SINGLESWITCHES-1 downto 0);\n')
 		if n_switches == 1:
 			f.write(f'\t\t\tsingleSwitches : in std_logic;\n')
+		if n_scissorCrossings > 1:
+			f.write(f'\t\t\tscrissorCrossings : in std_logic_vector(N_SCISSORCROSSINGS-1 downto 0);\n')
+		if n_scissorCrossings == 1:
+			f.write(f'\t\t\tscrissorCrossings : in std_logic;\n')
 		if n_doubleSwitch > 0:
 			f.write(f'\t\t\tdoubleSwitches : in dSwitches_type;\n')
 		
@@ -2103,7 +2197,7 @@ class ACG():
 		
 		f.write(f'begin\r\n')  
 		
-	# Ocupation | Routes | signals | levelCrossings | singleSwitch | doubleSwitch 
+	# Ocupation | Routes | signals | levelCrossings | singleSwitches | doubleSwitches | scissorCrossings
 		
 		f.write(f'\tprocess(clock,reset)\n')
 		f.write(f'\tbegin\n')
@@ -2145,6 +2239,12 @@ class ACG():
 				#print ('LSB: {}'.format(i+1))
 				f.write(f'\t\t\t\t\toutput({str(i)}) <= doubleSwitches.msb({str(int((i+1)/2))});\n')
 		
+		if n_scissorCrossings > 1:
+			f.write(f'\t\t\t\t\toutput({str(n_routes+2*n_signals+n_levelCrossings+n_switches+2*n_doubleSwitch+n_scissorCrossings-1)} downto {str(n_routes+2*n_signals+n_levelCrossings+n_switches+2*n_doubleSwitch)}) <= scissorCrossings;\n')
+		if n_scissorCrossings == 1:
+			f.write(f'\t\t\t\t\toutput({str(n_routes+2*n_signals+n_levelCrossings++n_switches+2*n_doubleSwitch)}) <= scissorCrossings;\n')
+
+
 		f.write(f'\t\t\t\tend if;\n')
 		f.write(f'\t\t\tend if;\n')
 		f.write(f'\t\tend if;\n')
@@ -2154,7 +2254,7 @@ class ACG():
 		
 		f.close()  # Close header file  
 
-	def createNetwork(self,graph,routes,N,n_netElements,n_signals,n_switches,n_doubleSwitch,n_levelCrossings,example = 1):
+	def createNetwork(self,graph,routes,N,n_netElements,n_signals,n_switches,n_doubleSwitch,n_scissorCrossings,n_levelCrossings,example = 1):
 		# Eliminate nodes
 		# Create routes
 		# Add interlock to dynamic elements
@@ -2186,6 +2286,8 @@ class ACG():
 			f.write(f'\t\t\tN_SINGLESWITCHES : natural := {str(n_switches)};\n')
 		if n_doubleSwitch > 0:    
 			f.write(f'\t\t\tN_DOUBLEWITCHES : natural := {str(n_doubleSwitch)};\n')
+		if n_scissorCrossings > 0:    
+			f.write(f'\t\t\tN_SCISSORCROSSINGS : natural := {str(n_scissorCrossings)};\n')
 		f.write(f'\t\t\tN_TRACKCIRCUITS : natural := {str(n_netElements)}\n')
 		f.write(f'\t\t);\n')
 		f.write(f'\t\tport(\n')
@@ -2204,6 +2306,9 @@ class ACG():
 		if n_switches > 0:
 			f.write(f'\t\t\tsingleSwitches_i : in std_logic{"_vector(N_SINGLESWITCHES-1 downto 0)" if n_switches > 1 else ""};\n')
 			f.write(f'\t\t\tsingleSwitches_o : out std_logic{"_vector(N_SINGLESWITCHES-1 downto 0)" if n_switches > 1 else ""};\n')
+		if n_scissorCrossings > 0:
+			f.write(f'\t\t\tscissorCrossings_i : in std_logic{"_vector(N_SCISSORCROSSINGS-1 downto 0)" if n_scissorCrossings > 1 else ""};\n')
+			f.write(f'\t\t\tscissorCrossings_o : out std_logic{"_vector(N_SCISSORCROSSINGS-1 downto 0)" if n_scissorCrossings > 1 else ""};\n')
 		if n_doubleSwitch > 0:
 			f.write(f'\t\t\tdoubleSwitches_i : in dSwitches_type;\n')  
 			f.write(f'\t\t\tdoubleSwitches_o : out dSwitches_type;\n')
@@ -2221,8 +2326,6 @@ class ACG():
 
 		#TODO: SIGNALS FIRST, DOUBLESWITCH LATER
 
-
-
 		# component levelCrossing  
 		if n_levelCrossings > 0:
 			for levelCrossingId in levelCrossingData:
@@ -2235,10 +2338,15 @@ class ACG():
 				index = list(singleSwitchData.keys()).index(singleSwitchId)
 				self.createSingleSwitch(index,singleSwitchId,singleSwitchData[singleSwitchId],mode = 'component',f = f)
 				self.createSingleSwitch(index,singleSwitchId,singleSwitchData[singleSwitchId],mode = 'entity',f = None, example = example)
-		# component singleSwitch  
+		# component doubleSwitch  
 		if n_doubleSwitch > 0:  	
 			self.createDoubleSwitch(mode = 'component',f = f)
 			self.createDoubleSwitch(mode = 'entity',f = None, example = example)
+		# component scissorCrossing  
+		#if n_doubleSwitch > 0:  	
+		#	self.createScissorCrossing (mode = 'component',f = f)
+		#	self.createScissorCrossing(mode = 'entity',f = None, example = example)
+
 		# component signals  
 		if n_signals > 0:  	
 			self.createSignal(mode = 'component',f = f)
@@ -2270,7 +2378,7 @@ class ACG():
 		f.write(f'\n signal {commands} : routeCommands;\r')
 		commands = " , ".join([f'cmd_R{i}_{j}' for i in routes for j in routes[i]['LevelCrossings']])
 		f.write(f'\n signal {commands} : routeCommands;\r')
-		commands = " , ".join([f'cmd_R{i}_{j[:-2]}' for i in routes for j in routes[i]['Switches']])
+		commands = " , ".join([f'cmd_R{i}_{j.split('_')[0]}' for i in routes for j in routes[i]['Switches']])
 		f.write(f'\n signal {commands} : routeCommands;\r\n')
 
 		f.write(f'begin\r\n') 
@@ -2368,8 +2476,8 @@ class ACG():
 				f.write(f'{levelCrossingId}_command => cmd_R{routeId}_{levelCrossingId}, ')	
 				f.write(f'{levelCrossingId}_state => state_{levelCrossingId}, ')	
 			for singleSwitchId in routes[routeId]['Switches']:
-				f.write(f'{"s" if singleSwitchId[0].isdigit() else ""}{singleSwitchId[:-2]}_command => cmd_R{routeId}_{singleSwitchId[:-2]}, ')	
-				f.write(f'{"s" if singleSwitchId[0].isdigit() else ""}{singleSwitchId[:-2]}_state => state_{singleSwitchId[:-2]}, ')
+				f.write(f'{"s" if singleSwitchId[0].isdigit() else ""}{singleSwitchId.split('_')[0]}_command => cmd_R{routeId}_{singleSwitchId.split('_')[0]}, ')	
+				f.write(f'{"s" if singleSwitchId[0].isdigit() else ""}{singleSwitchId.split('_')[0]}_state => state_{singleSwitchId.split('_')[0]}, ')
 			f.write(f'routeState => routes_o({index}));\r\n')
 
 		f.write(f'end Behavioral;') 
@@ -2786,8 +2894,8 @@ class ACG():
 			f.write(f'\t\t\t{levelCrossing}_command : out routeCommands;\r\n')	
 
 		for singleSwitch in route['Switches']:
-			f.write(f'\t\t\t{"s" if singleSwitch[0].isdigit() else ""}{singleSwitch[:-2]}_state : in singleSwitchStates;\r\n')
-			f.write(f'\t\t\t{"s" if singleSwitch[0].isdigit() else ""}{singleSwitch[:-2]}_command : out routeCommands;\r\n')	
+			f.write(f'\t\t\t{"s" if singleSwitch[0].isdigit() else ""}{singleSwitch.split('_')[0]}_state : in singleSwitchStates;\r\n')
+			f.write(f'\t\t\t{"s" if singleSwitch[0].isdigit() else ""}{singleSwitch.split('_')[0]}_command : out routeCommands;\r\n')	
 				
 		f.write(f'\t\t\trouteState : out std_logic\n')
 		f.write(f'\t\t);\n')
@@ -2987,7 +3095,7 @@ class ACG():
 		print("#"*50+' Reading railML object '+"#"*50)
 		
 		network = self.create_graph_structure(RML,example)
-		#self.print_network(network)
+		self.print_network(network)
 		
 		n_routes = len(routes)
 		#for route in routes:
@@ -2997,7 +3105,7 @@ class ACG():
 		#self.create_graph(RML,network,example)
 
 		# Calculate N and M
-		N,M,n_netElements,n_switches,n_doubleSwitch,n_levelCrossings,n_signals_1,n_signals_2,n_signals_3 = self.calculate_parameters(network)
+		N,M,n_netElements,n_switches,n_doubleSwitch,n_scissorCrossings,n_levelCrossings,n_signals_1,n_signals_2,n_signals_3 = self.calculate_parameters(network)
 		N = N + n_routes
 		M = M + n_routes
 		print(f'N : {N}\nM : {M}')
@@ -3007,7 +3115,7 @@ class ACG():
 		print("#"*30+' Creating VHDL files '+"#"*30)
 		
 		print(f'Creating package ... ',end='')
-		self.createPacket(n_switches,n_doubleSwitch,n_levelCrossings,n_signals,example)
+		self.createPacket(n_switches,n_doubleSwitch,n_scissorCrossings,n_levelCrossings,n_signals,example)
 		print(f'Done')
 		
 		print(f'Creating global wrapper ... ',end='')
@@ -3027,19 +3135,19 @@ class ACG():
 		print(f'Done')
 		
 		print(f'Creating interlocking ... ',end='')
-		self.createInterlocking(N,M,n_netElements,n_routes,n_switches,n_doubleSwitch,n_levelCrossings,n_signals,example)
+		self.createInterlocking(N,M,n_netElements,n_routes,n_switches,n_doubleSwitch,n_scissorCrossings,n_levelCrossings,n_signals,example)
 		print(f'Done')
 		
 		print(f'Creating splitter ... ',end='')
-		self.createSplitter(N,n_netElements,n_routes,n_signals,n_switches,n_doubleSwitch,n_levelCrossings,example)
+		self.createSplitter(N,n_netElements,n_routes,n_signals,n_switches,n_doubleSwitch,n_scissorCrossings,n_levelCrossings,example)
 		print(f'Done')
 		
 		print(f'Creating mediator ... ',end='')
-		self.createMediator(N,M,n_netElements,n_routes,n_signals,n_switches,n_doubleSwitch,n_levelCrossings,example)
+		self.createMediator(N,M,n_netElements,n_routes,n_signals,n_switches,n_doubleSwitch,n_scissorCrossings,n_levelCrossings,example)
 		print(f'Done')
 		
 		print(f'Creating network ... ',end='')
-		self.createNetwork(network,routes,N,n_netElements,n_signals,n_switches,n_doubleSwitch,n_levelCrossings,example)
+		self.createNetwork(network,routes,N,n_netElements,n_signals,n_switches,n_doubleSwitch,n_scissorCrossings,n_levelCrossings,example)
 		print(f'Done')
 	
 		print(f'Creating printer ... ',end='')
