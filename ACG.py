@@ -2329,6 +2329,8 @@ class ACG():
 		#print(scissorCrossingData)
 		doubleSwitchData = self.getDoubleSwitch(graph,routes)
 		#print(doubleSwitchData)
+		signalData = self.getSignal(graph,routes)
+		#print(signalData)
 
 		# component levelCrossing  
 		if n_levelCrossings > 0:
@@ -2663,6 +2665,39 @@ class ACG():
 						doubleSwitchId[doubleSwitch]['Routes'].append(f'R{route}')
 						doubleSwitchId[doubleSwitch]['Position'].append(f'RR')
 		return doubleSwitchId
+
+	def getSignal(self,network,routes):
+		signalId = {}
+
+		for element in network:
+			if 'Signal' in network[element]:
+				for signal in network[element]['Signal']:
+					if signal not in signalId:
+						signalId[signal] = {}
+						signalId[signal] |= {'Start':element}
+		for signal in signalId:
+			for route in routes:
+				if signal == routes[route]['Start']:
+					if 'Next' not in signalId[signal]:
+						signalId[signal] |= {'Next':[]}
+					if routes[route]['Path'][1:] not in signalId[signal]['Next']:
+						signalId[signal]['Next'].append(routes[route]['End'])
+
+					if 'Path' not in signalId[signal]:
+						signalId[signal] |= {'Path':[]}
+					if routes[route]['Path'][1:] not in signalId[signal]['Path']:
+						signalId[signal]['Path'].append(routes[route]['Path'][1:])						
+
+		print('')
+		for signal in signalId:
+			print(f'{signal} > {signalId[signal]}')	
+
+		return signalId
+
+
+
+	
+
 
 	def createLevelCrossing(self,index,name,data,mode, f = None,example = 1):	
 		if mode == 'entity':
