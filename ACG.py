@@ -2711,9 +2711,9 @@ class ACG():
 					if routes[route]['Path'][1:] not in signalId[signal]['Path']:
 						signalId[signal]['Path'].append(routes[route]['Path'][1:])						
 
-		print('')
-		for signal in signalId:
-			print(f'{signal} > {signalId[signal]}')	
+		#print('')
+		#for signal in signalId:
+		#	print(f'{signal} > {signalId[signal]}')	
 
 		return signalId
 
@@ -2749,16 +2749,46 @@ class ACG():
 		f.write(f'\t\t);\n')
 		f.write(f'\tend {mode} {levelCrossing};\r\n')
 
-		#	TODO: ADD COUNTER
-
 		if mode == 'entity':
 			freeState = " and ".join([f'{i}_command = RELEASE' for i in commands])
 			reserveState = " or ".join([f'{i}_command = RESERVE' for i in commands])
 			lockState = " or ".join([f'{i}_command = LOCK' for i in commands])
 
+			freq = 10e6
+			timeout = 7
+
+			FF = math.ceil(math.log2(timeout*freq))
+
+			t = [(2**(i+1))/freq for i in range(FF)]
+			sequence = [0]*FF
+			total = 0
+			for i in range(FF-1,-1,-1):
+				if total + t[i] <= timeout:
+					total += t[i]
+					sequence[i] = 1
+			timeout_stop = " and ".join([f'Q({i}) = \'{sequence[i]}\'' for i in range(FF)])
+	
 			f.write(f'architecture Behavioral of {node} is\r\n')
+
+			f.write(f'\tcomponent flipFlop is\r\n')
+			f.write(f'\t\tport(\r\n')
+			f.write(f'\t\t\tclock : in std_logic;\r\n')
+			f.write(f'\t\t\treset : in std_logic;\r\n')
+			f.write(f'\t\t\tQ : out std_logic\r\n')
+			f.write(f'\t\t);\r\n')
+			f.write(f'\tend component flipFlop;\r\n')
+
+			f.write(f'signal reset : std_logic := \'0\';\r\n')
+			f.write(f'signal Q : std_logic_vector({FF} downto 0) := (others => \'0\');\r\n')
 			f.write(f'signal command_aux : std_logic;\r\n')
+
 			f.write(f'begin\r\n')
+
+			f.write(f'\tgen : for i in 0 to {FF-1} generate\r\n')
+			f.write(f'\t\tinst: flipFlop port map(Q(i),reset,Q(i+1));\r\n')
+			f.write(f'\tend generate;\r\n')
+
+			f.write(f'\tQ(0) <= clock;\r\n')
 
 			f.write(f'\tprocess(clock)\r\n')
 			f.write(f'\tbegin\r\n')
@@ -2779,24 +2809,42 @@ class ACG():
 			f.write(f'\tprocess(clock)\r\n')
 			f.write(f'\tbegin\r\n')
 			f.write(f'\t\tif (clock = \'1\' and clock\'Event) then\r\n')
-			f.write(f'\t\t\tif ({freeState}) then\r\n')
-			f.write(f'\t\t\t\tif (command_aux = \'0\' and indication = \'0\') then\r\n')
+
+			f.write(f'\t\t\tif({timeout_stop}) then\r\n')
+			f.write(f'\t\t\t\treset <= \'1\';\r\n')
+			f.write(f'\t\t\t\tif(indication = \'0\') then\r\n')
 			f.write(f'\t\t\t\t\tcorrespondence_{name} <= DOWN;\r\n')
-			f.write(f'\t\t\t\tend if;\r\n')
-			f.write(f'\t\t\t\tif (command_aux = \'1\' and indication = \'1\') then\r\n')
+			f.write(f'\t\t\t\telse\r\n')
 			f.write(f'\t\t\t\t\tcorrespondence_{name} <= UP;\r\n')
 			f.write(f'\t\t\t\tend if;\r\n')
-			f.write(f'\t\t\t\tif ((command_aux = \'0\' and indication = \'1\') or (command_aux = \'1\' and indication = \'0\')) then\r\n')
-			f.write(f'\t\t\t\t\tcorrespondence_{name} <= TRANSITION;\r\n')
-			f.write(f'\t\t\t\tend if;\r\n')
 			f.write(f'\t\t\telse\r\n')
+
+			f.write(f'\t\t\t\tif ({freeState}) then\r\n')
+			f.write(f'\t\t\t\t\tif (command_aux = \'0\' and indication = \'0\') then\r\n')
+			f.write(f'\t\t\t\t\t\tcorrespondence_{name} <= DOWN;\r\n')
+			f.write(f'\t\t\t\t\t\treset <= \'1\';\r\n')
+			f.write(f'\t\t\t\t\tend if;\r\n')
+			f.write(f'\t\t\t\t\tif (command_aux = \'1\' and indication = \'1\') then\r\n')
+			f.write(f'\t\t\t\t\t\tcorrespondence_{name} <= UP;\r\n')
+			f.write(f'\t\t\t\t\t\treset <= \'1\';\r\n')
+			f.write(f'\t\t\t\t\tend if;\r\n')
+			f.write(f'\t\t\t\t\tif (command_aux /= indication) then\r\n')
+			f.write(f'\t\t\t\t\t\tcorrespondence_{name} <= TRANSITION;\r\n')
+			f.write(f'\t\t\t\t\t\treset <= \'0\';\r\n')
+			f.write(f'\t\t\t\t\tend if;\r\n')
+			f.write(f'\t\t\t\tend if;\r\n')
+			
 			f.write(f'\t\t\t\tif ({reserveState}) then\r\n')
 			f.write(f'\t\t\t\t\tcorrespondence_{name} <= RESERVED;\r\n')
+			f.write(f'\t\t\t\t\treset <= \'1\';\r\n')
 			f.write(f'\t\t\t\tend if;\r\n')
 			f.write(f'\t\t\t\tif ({lockState}) then\r\n')
 			f.write(f'\t\t\t\t\tcorrespondence_{name} <= LOCKED;\r\n')
+			f.write(f'\t\t\t\t\treset <= \'1\';\r\n')
 			f.write(f'\t\t\t\tend if;\r\n')
+
 			f.write(f'\t\t\tend if;\r\n')
+
 			f.write(f'\t\tend if;\r\n')
 			f.write(f'\tend process;\r\n') 
 
@@ -2837,8 +2885,6 @@ class ACG():
 		f.write(f'\t\t);\n')
 		f.write(f'\tend {mode} {singleSwitch};\r\n')
 
-		#	TODO: ADD COUNTER
-
 		if mode == 'entity':
 			freeState = " and ".join([f'{i}_command = RELEASE' for i in commands])
 			freeState_N = " and ".join([f'{i}_command = RELEASE' for i in commands_N])
@@ -2850,10 +2896,41 @@ class ACG():
 			lockState_N = " or ".join([f'{i}_command = LOCK' for i in commands_N])
 			lockState_R = " or ".join([f'{i}_command = LOCK' for i in commands_R])
 
+			freq = 10e6
+			timeout = 7
+
+			FF = math.ceil(math.log2(timeout*freq))
+
+			t = [(2**(i+1))/freq for i in range(FF)]
+			sequence = [0]*FF
+			total = 0
+			for i in range(FF-1,-1,-1):
+				if total + t[i] <= timeout:
+					total += t[i]
+					sequence[i] = 1
+			timeout_stop = " and ".join([f'Q({i}) = \'{sequence[i]}\'' for i in range(FF)])
+
 			f.write(f'architecture Behavioral of {node} is\n')
-			f.write(f'signal command_aux : std_logic;\n')
+
+			f.write(f'\tcomponent flipFlop is\r\n')
+			f.write(f'\t\tport(\r\n')
+			f.write(f'\t\t\tclock : in std_logic;\r\n')
+			f.write(f'\t\t\treset : in std_logic;\r\n')
+			f.write(f'\t\t\tQ : out std_logic\r\n')
+			f.write(f'\t\t);\r\n')
+			f.write(f'\tend component flipFlop;\r\n')
+
+			f.write(f'signal reset : std_logic := \'0\';\r\n')
+			f.write(f'signal Q : std_logic_vector({FF} downto 0) := (others => \'0\');\r\n')
+			f.write(f'signal command_aux : std_logic;\r\n')
+
 			f.write(f'begin\n')
 
+			f.write(f'\tgen : for i in 0 to {FF-1} generate\r\n')
+			f.write(f'\t\tinst: flipFlop port map(Q(i),reset,Q(i+1));\r\n')
+			f.write(f'\tend generate;\r\n')
+
+			f.write(f'\tQ(0) <= clock;\r\n')
 			f.write(f'\tprocess(clock)\n')
 			f.write(f'\tbegin\n')
 			f.write(f'\t\tif (clock = \'1\' and clock\'Event) then\n')
@@ -2879,24 +2956,41 @@ class ACG():
 			f.write(f'\tprocess(clock)\n')
 			f.write(f'\tbegin\n')
 			f.write(f'\t\tif (clock = \'1\' and clock\'Event) then\n')
-			f.write(f'\t\t\tif ({freeState}) then\n')
-			f.write(f'\t\t\t\tif (command_aux = \'0\' and indication = \'0\') then\n')
-			f.write(f'\t\t\t\t\tcorrespondence_{name} <= NORMAL;\n')
-			f.write(f'\t\t\t\tend if;\n')
-			f.write(f'\t\t\t\tif (command_aux = \'1\' and indication = \'1\') then\n')
-			f.write(f'\t\t\t\t\tcorrespondence_{name} <= REVERSE;\n')
-			f.write(f'\t\t\t\tend if;\n')
-			f.write(f'\t\t\t\tif ((command_aux = \'0\' and indication = \'1\') or (command_aux = \'1\' and indication = \'0\')) then\n')
-			f.write(f'\t\t\t\t\tcorrespondence_{name} <= TRANSITION;\n')
-			f.write(f'\t\t\t\tend if;\n')
-			f.write(f'\t\t\telse\n')
-			f.write(f'\t\t\t\tif ({reserveState}) then\n')
-			f.write(f'\t\t\t\t\tcorrespondence_{name} <= RESERVED;\n')
-			f.write(f'\t\t\t\tend if;\n')
-			f.write(f'\t\t\t\tif ({lockState}) then\n')
-			f.write(f'\t\t\t\t\tcorrespondence_{name} <= LOCKED;\n')
-			f.write(f'\t\t\t\tend if;\n')
-			f.write(f'\t\t\tend if;\n')
+
+			f.write(f'\t\t\tif({timeout_stop}) then\r\n')
+			f.write(f'\t\t\t\treset <= \'1\';\r\n')
+			f.write(f'\t\t\t\tif(indication = \'0\') then\r\n')
+			f.write(f'\t\t\t\t\tcorrespondence_{name} <= NORMAL;\r\n')
+			f.write(f'\t\t\t\telse\r\n')
+			f.write(f'\t\t\t\t\tcorrespondence_{name} <= REVERSE;\r\n')
+			f.write(f'\t\t\t\tend if;\r\n')
+			f.write(f'\t\t\telse\r\n')
+
+			f.write(f'\t\t\t\tif ({freeState}) then\r\n')
+			f.write(f'\t\t\t\t\tif (command_aux = \'0\' and indication = \'0\') then\r\n')
+			f.write(f'\t\t\t\t\t\tcorrespondence_{name} <= NORMAL;\r\n')
+			f.write(f'\t\t\t\t\t\treset <= \'1\';\r\n')
+			f.write(f'\t\t\t\t\tend if;\r\n')
+			f.write(f'\t\t\t\t\tif (command_aux = \'1\' and indication = \'1\') then\r\n')
+			f.write(f'\t\t\t\t\t\tcorrespondence_{name} <= REVERSE;\r\n')
+			f.write(f'\t\t\t\t\t\treset <= \'1\';\r\n')
+			f.write(f'\t\t\t\t\tend if;\r\n')
+			f.write(f'\t\t\t\t\tif (command_aux /= indication) then\r\n')
+			f.write(f'\t\t\t\t\t\tcorrespondence_{name} <= TRANSITION;\r\n')
+			f.write(f'\t\t\t\t\t\treset <= \'0\';\r\n')
+			f.write(f'\t\t\t\t\tend if;\r\n')
+			f.write(f'\t\t\t\tend if;\r\n')
+
+			f.write(f'\t\t\t\tif ({reserveState}) then\r\n')
+			f.write(f'\t\t\t\t\tcorrespondence_{name} <= RESERVED;\r\n')
+			f.write(f'\t\t\t\t\treset <= \'1\';\r\n')
+			f.write(f'\t\t\t\tend if;\r\n')
+			f.write(f'\t\t\t\tif ({lockState}) then\r\n')
+			f.write(f'\t\t\t\t\tcorrespondence_{name} <= LOCKED;\r\n')
+			f.write(f'\t\t\t\t\treset <= \'1\';\r\n')
+			f.write(f'\t\t\t\tend if;\r\n')
+			f.write(f'\t\t\tend if;\r\n')
+
 			f.write(f'\t\tend if;\n')
 			f.write(f'\tend process;\n') 
 			
@@ -2962,9 +3056,41 @@ class ACG():
 			lockState_RN = " or ".join([f'{i}_command = LOCK' for i in commands_RN])
 			lockState_NR = " or ".join([f'{i}_command = LOCK' for i in commands_NR])
 
+			freq = 10e6
+			timeout = 7
+
+			FF = math.ceil(math.log2(timeout*freq))
+
+			t = [(2**(i+1))/freq for i in range(FF)]
+			sequence = [0]*FF
+			total = 0
+			for i in range(FF-1,-1,-1):
+				if total + t[i] <= timeout:
+					total += t[i]
+					sequence[i] = 1
+			timeout_stop = " and ".join([f'Q({i}) = \'{sequence[i]}\'' for i in range(FF)])
+
 			f.write(f'architecture Behavioral of {node} is\n')
-			f.write(f'signal command_aux : dSwitch_type;\n')
+
+			f.write(f'\tcomponent flipFlop is\r\n')
+			f.write(f'\t\tport(\r\n')
+			f.write(f'\t\t\tclock : in std_logic;\r\n')
+			f.write(f'\t\t\treset : in std_logic;\r\n')
+			f.write(f'\t\t\tQ : out std_logic\r\n')
+			f.write(f'\t\t);\r\n')
+			f.write(f'\tend component flipFlop;\r\n')
+
+			f.write(f'signal reset : std_logic := \'0\';\r\n')
+			f.write(f'signal Q : std_logic_vector({FF} downto 0) := (others => \'0\');\r\n')
+			f.write(f'signal command_aux : dSwitch_type;\r\n')
+
 			f.write(f'begin\n')
+
+			f.write(f'\tgen : for i in 0 to {FF-1} generate\r\n')
+			f.write(f'\t\tinst: flipFlop port map(Q(i),reset,Q(i+1));\r\n')
+			f.write(f'\tend generate;\r\n')
+
+			f.write(f'\tQ(0) <= clock;\r\n')
 
 			f.write(f'\tprocess(clock)\n')
 			f.write(f'\tbegin\n')
@@ -3012,32 +3138,58 @@ class ACG():
 			f.write(f'\tprocess(clock)\n')
 			f.write(f'\tbegin\n')
 			f.write(f'\t\tif (clock = \'1\' and clock\'Event) then\n')
-			f.write(f'\t\t\tif ({freeState}) then\n')
-			f.write(f'\t\t\t\tif (command_aux.msb = \'0\' and command_aux.lsb = \'0\' and indication.msb = \'0\' and indication.lsb = \'0\') then\n')
-			f.write(f'\t\t\t\t\tcorrespondence_{name} <= DOUBLE_NORMAL;\n')
-			f.write(f'\t\t\t\tend if;\n')
-			f.write(f'\t\t\t\tif (command_aux.msb = \'0\' and command_aux.lsb = \'1\' and indication.msb = \'0\' and indication.lsb = \'1\') then\n')
-			f.write(f'\t\t\t\t\tcorrespondence_{name} <= DOUBLE_REVERSE;\n')
-			f.write(f'\t\t\t\tend if;\n')
-			f.write(f'\t\t\t\tif (command_aux.msb = \'1\' and command_aux.lsb = \'0\' and indication.msb = \'1\' and indication.lsb = \'0\') then\n')
-			f.write(f'\t\t\t\t\tcorrespondence_{name} <= REVERSE_NORMAL;\n')
-			f.write(f'\t\t\t\tend if;\n')
-			f.write(f'\t\t\t\tif (command_aux.msb = \'1\' and command_aux.lsb = \'1\' and indication.msb = \'1\' and indication.lsb = \'1\') then\n')
-			f.write(f'\t\t\t\t\tcorrespondence_{name} <= NORMAL_REVERSE;\n')
-			f.write(f'\t\t\t\tend if;\n')
 
-			f.write(f'\t\t\t\tif ((command_aux.msb /= indication.msb) or (command_aux.lsb /= indication.lsb)) then\n')
-			f.write(f'\t\t\t\t\tcorrespondence_{name} <= TRANSITION;\n')
-			f.write(f'\t\t\t\tend if;\n')
-			f.write(f'\t\t\telse\n')
-			f.write(f'\t\t\t\tif ({reserveState}) then\n')
-			f.write(f'\t\t\t\t\tcorrespondence_{name} <= RESERVED;\n')
-			f.write(f'\t\t\t\tend if;\n')
-			f.write(f'\t\t\t\tif ({lockState}) then\n')
-			f.write(f'\t\t\t\t\tcorrespondence_{name} <= LOCKED;\n')
-			f.write(f'\t\t\t\tend if;\n')
-			f.write(f'\t\t\tend if;\n')
+			f.write(f'\t\t\tif({timeout_stop}) then\r\n')
+			f.write(f'\t\t\t\treset <= \'1\';\r\n')
+			f.write(f'\t\t\t\tif(indication.msb = \'0\' and indication.lsb = \'0\') then\r\n')
+			f.write(f'\t\t\t\t\tcorrespondence_{name} <= DOUBLE_NORMAL;\r\n')
+			f.write(f'\t\t\t\tend if;\r\n')
+			f.write(f'\t\t\t\tif(indication.msb = \'1\' and indication.lsb = \'1\') then\r\n')
+			f.write(f'\t\t\t\t\tcorrespondence_{name} <= DOUBLE_REVERSE;\r\n')
+			f.write(f'\t\t\t\tend if;\r\n')
+			f.write(f'\t\t\t\tif(indication.msb = \'0\' and indication.lsb = \'1\') then\r\n')
+			f.write(f'\t\t\t\t\tcorrespondence_{name} <= NORMAL_REVERSE;\r\n')
+			f.write(f'\t\t\t\tend if;\r\n')
+			f.write(f'\t\t\t\tif(indication.msb = \'1\' and indication.lsb = \'0\') then\r\n')
+			f.write(f'\t\t\t\t\tcorrespondence_{name} <= REVERSE_NORMAL;\r\n')
+			f.write(f'\t\t\t\tend if;\r\n')
+			f.write(f'\t\t\telse\r\n')
+
+			f.write(f'\t\t\t\tif ({freeState}) then\r\n')
+			f.write(f'\t\t\t\t\tif (command_aux.msb = \'0\' and command_aux.lsb = \'0\' and indication.msb = \'0\' and indication.lsb = \'0\') then\r\n')
+			f.write(f'\t\t\t\t\t\tcorrespondence_{name} <= DOUBLE_NORMAL;\r\n')
+			f.write(f'\t\t\t\t\t\treset <= \'1\';\r\n')
+			f.write(f'\t\t\t\t\tend if;\r\n')
+			f.write(f'\t\t\t\t\tif (command_aux.msb = \'1\' and command_aux.lsb = \'1\' and indication.msb = \'1\' and indication.lsb = \'1\') then\r\n')
+			f.write(f'\t\t\t\t\t\tcorrespondence_{name} <= DOUBLE_REVERSE;\r\n')
+			f.write(f'\t\t\t\t\t\treset <= \'1\';\r\n')
+			f.write(f'\t\t\t\t\tend if;\r\n')
+			f.write(f'\t\t\t\t\tif (command_aux.msb = \'0\' and command_aux.lsb = \'1\' and indication.msb = \'0\' and indication.lsb = \'1\') then\r\n')
+			f.write(f'\t\t\t\t\t\tcorrespondence_{name} <= NORMAL_REVERSE;\r\n')
+			f.write(f'\t\t\t\t\t\treset <= \'1\';\r\n')
+			f.write(f'\t\t\t\t\tend if;\r\n')
+			f.write(f'\t\t\t\t\tif (command_aux.msb = \'1\' and command_aux.lsb = \'0\' and indication.msb = \'1\' and indication.lsb = \'0\') then\r\n')
+			f.write(f'\t\t\t\t\t\tcorrespondence_{name} <= REVERSE_NORMAL;\r\n')
+			f.write(f'\t\t\t\t\t\treset <= \'1\';\r\n')
+			f.write(f'\t\t\t\t\tend if;\r\n')
+			f.write(f'\t\t\t\t\tif ((command_aux.msb /= indication.msb) or (command_aux.lsb /= indication.lsb)) then\r\n')
+			f.write(f'\t\t\t\t\t\tcorrespondence_{name} <= TRANSITION;\r\n')
+			f.write(f'\t\t\t\t\t\treset <= \'0\';\r\n')
+			f.write(f'\t\t\t\t\tend if;\r\n')
+			f.write(f'\t\t\t\tend if;\r\n')
+
+			f.write(f'\t\t\t\tif ({reserveState}) then\r\n')
+			f.write(f'\t\t\t\t\tcorrespondence_{name} <= RESERVED;\r\n')
+			f.write(f'\t\t\t\t\treset <= \'1\';\r\n')
+			f.write(f'\t\t\t\tend if;\r\n')
+			f.write(f'\t\t\t\tif ({lockState}) then\r\n')
+			f.write(f'\t\t\t\t\tcorrespondence_{name} <= LOCKED;\r\n')
+			f.write(f'\t\t\t\t\treset <= \'1\';\r\n')
+			f.write(f'\t\t\t\tend if;\r\n')
+
+			f.write(f'\t\t\tend if;\r\n')
 			f.write(f'\t\tend if;\n')
+			
 			f.write(f'\tend process;\n') 
 			
 			f.write(f'\tcommand <= command_aux;\n')
@@ -3077,8 +3229,6 @@ class ACG():
 		f.write(f'\t\t);\n')
 		f.write(f'\tend {mode} {scissorCrossing};\r\n')
 
-		#	TODO: ADD COUNTER
-
 		if mode == 'entity':
 			freeState = " and ".join([f'{i}_command = RELEASE' for i in commands])
 			freeState_N = " and ".join([f'{i}_command = RELEASE' for i in commands_N])
@@ -3090,9 +3240,41 @@ class ACG():
 			lockState_N = " or ".join([f'{i}_command = LOCK' for i in commands_N])
 			lockState_R = " or ".join([f'{i}_command = LOCK' for i in commands_R])
 
+			freq = 10e6
+			timeout = 7
+
+			FF = math.ceil(math.log2(timeout*freq))
+
+			t = [(2**(i+1))/freq for i in range(FF)]
+			sequence = [0]*FF
+			total = 0
+			for i in range(FF-1,-1,-1):
+				if total + t[i] <= timeout:
+					total += t[i]
+					sequence[i] = 1
+			timeout_stop = " and ".join([f'Q({i}) = \'{sequence[i]}\'' for i in range(FF)])
+
 			f.write(f'architecture Behavioral of {node} is\n')
-			f.write(f'signal command_aux : std_logic;\n')
+
+			f.write(f'\tcomponent flipFlop is\r\n')
+			f.write(f'\t\tport(\r\n')
+			f.write(f'\t\t\tclock : in std_logic;\r\n')
+			f.write(f'\t\t\treset : in std_logic;\r\n')
+			f.write(f'\t\t\tQ : out std_logic\r\n')
+			f.write(f'\t\t);\r\n')
+			f.write(f'\tend component flipFlop;\r\n')
+
+			f.write(f'signal reset : std_logic := \'0\';\r\n')
+			f.write(f'signal Q : std_logic_vector({FF} downto 0) := (others => \'0\');\r\n')
+			f.write(f'signal command_aux : std_logic;\r\n')
+
 			f.write(f'begin\n')
+
+			f.write(f'\tgen : for i in 0 to {FF-1} generate\r\n')
+			f.write(f'\t\tinst: flipFlop port map(Q(i),reset,Q(i+1));\r\n')
+			f.write(f'\tend generate;\r\n')
+
+			f.write(f'\tQ(0) <= clock;\r\n')
 
 			f.write(f'\tprocess(clock)\n')
 			f.write(f'\tbegin\n')
@@ -3119,24 +3301,42 @@ class ACG():
 			f.write(f'\tprocess(clock)\n')
 			f.write(f'\tbegin\n')
 			f.write(f'\t\tif (clock = \'1\' and clock\'Event) then\n')
-			f.write(f'\t\t\tif ({freeState}) then\n')
-			f.write(f'\t\t\t\tif (command_aux = \'0\' and indication = \'0\') then\n')
-			f.write(f'\t\t\t\t\tcorrespondence_{name} <= NORMAL;\n')
-			f.write(f'\t\t\t\tend if;\n')
-			f.write(f'\t\t\t\tif (command_aux = \'1\' and indication = \'1\') then\n')
-			f.write(f'\t\t\t\t\tcorrespondence_{name} <= REVERSE;\n')
-			f.write(f'\t\t\t\tend if;\n')
-			f.write(f'\t\t\t\tif ( command_aux /= indication ) then\n')
-			f.write(f'\t\t\t\t\tcorrespondence_{name} <= TRANSITION;\n')
-			f.write(f'\t\t\t\tend if;\n')
-			f.write(f'\t\t\telse\n')
-			f.write(f'\t\t\t\tif ({reserveState}) then\n')
-			f.write(f'\t\t\t\t\tcorrespondence_{name} <= RESERVED;\n')
-			f.write(f'\t\t\t\tend if;\n')
-			f.write(f'\t\t\t\tif ({lockState}) then\n')
-			f.write(f'\t\t\t\t\tcorrespondence_{name} <= LOCKED;\n')
-			f.write(f'\t\t\t\tend if;\n')
-			f.write(f'\t\t\tend if;\n')
+
+			f.write(f'\t\t\tif({timeout_stop}) then\r\n')
+			f.write(f'\t\t\t\treset <= \'1\';\r\n')
+			f.write(f'\t\t\t\tif(indication = \'0\') then\r\n')
+			f.write(f'\t\t\t\t\tcorrespondence_{name} <= NORMAL;\r\n')
+			f.write(f'\t\t\t\telse\r\n')
+			f.write(f'\t\t\t\t\tcorrespondence_{name} <= REVERSE;\r\n')
+			f.write(f'\t\t\t\tend if;\r\n')
+			f.write(f'\t\t\telse\r\n')
+
+			f.write(f'\t\t\t\tif ({freeState}) then\r\n')
+			f.write(f'\t\t\t\t\tif (command_aux = \'0\' and indication = \'0\') then\r\n')
+			f.write(f'\t\t\t\t\t\tcorrespondence_{name} <= NORMAL;\r\n')
+			f.write(f'\t\t\t\t\t\treset <= \'1\';\r\n')
+			f.write(f'\t\t\t\t\tend if;\r\n')
+			f.write(f'\t\t\t\t\tif (command_aux = \'1\' and indication = \'1\') then\r\n')
+			f.write(f'\t\t\t\t\t\tcorrespondence_{name} <= REVERSE;\r\n')
+			f.write(f'\t\t\t\t\t\treset <= \'1\';\r\n')
+			f.write(f'\t\t\t\t\tend if;\r\n')
+			f.write(f'\t\t\t\t\tif (command_aux /= indication) then\r\n')
+			f.write(f'\t\t\t\t\t\tcorrespondence_{name} <= TRANSITION;\r\n')
+			f.write(f'\t\t\t\t\t\treset <= \'0\';\r\n')
+			f.write(f'\t\t\t\t\tend if;\r\n')
+			f.write(f'\t\t\t\tend if;\r\n')
+
+			f.write(f'\t\t\t\tif ({reserveState}) then\r\n')
+			f.write(f'\t\t\t\t\tcorrespondence_{name} <= RESERVED;\r\n')
+			f.write(f'\t\t\t\t\treset <= \'1\';\r\n')
+			f.write(f'\t\t\t\tend if;\r\n')
+			f.write(f'\t\t\t\tif ({lockState}) then\r\n')
+			f.write(f'\t\t\t\t\tcorrespondence_{name} <= LOCKED;\r\n')
+			f.write(f'\t\t\t\t\treset <= \'1\';\r\n')
+			f.write(f'\t\t\t\tend if;\r\n')
+
+			f.write(f'\t\t\tend if;\r\n')
+
 			f.write(f'\t\tend if;\n')
 			f.write(f'\tend process;\n') 
 			
@@ -3486,6 +3686,45 @@ class ACG():
 		
 		f.close()  # Close header file   
 	
+	def createFlipFlop(self,example):
+		node = 'flipFlop'
+		f = open(f'App/Layouts/Example_{example}/VHDL/{node}.vhd',"w+")
+		
+		# Initial comment
+		self.initialComment(node,f)
+		
+		# Include library
+		self.includeLibrary(f)
+			
+		# flipFlop entity
+		flipFlop = "flipFlop"
+		f.write(f'\tentity {flipFlop} is\n')
+		f.write(f'\t\tport(\n')
+		f.write(f'\t\t\tclock : in std_logic;\n')
+		f.write(f'\t\t\treset : in std_logic;\n')
+		f.write(f'\t\t\tQ : out std_logic\n')
+		f.write(f'\t\t);\n')
+		f.write(f'\tend entity {flipFlop};\r\n') 
+	
+		f.write(f'architecture Behavioral of {flipFlop} is\r\n')            
+		
+		f.write(f'\tsignal Q_aux : std_logic;\r\n') 
+	
+		f.write(f'begin\r\n')
+		
+		f.write(f'\tflip_flop : process(clock)\n')   
+		f.write(f'\tbegin\n')
+		f.write(f'\t\tif (reset = \'1\') then\n')
+		f.write(f'\t\t\tQ_aux <= \'0\';\n')
+		f.write(f'\t\telsif(rising_edge(clock)) then\n')
+		f.write(f'\t\t\tQ_aux <= not Q_aux;\n')
+		f.write(f'\t\tend if;\n') 
+		f.write(f'\tend process;\r\n')
+		f.write(f'\tQ <= Q_aux;\r\n')	
+		f.write(f'end Behavioral;') 
+		
+		f.close()  # Close header file
+
 	def __init__(self,RML,routes,example = 1):
 		print("#"*50+' Reading railML object '+"#"*50)
 		
@@ -3553,4 +3792,8 @@ class ACG():
 		self.createSelector(example)
 		print(f'Done')
 		
+		print(f'Creating timers ... ',end='')
+		self.createFlipFlop(example)
+		print(f'Done')
+
 		print("#"*30+' VHDL files Created '+"#"*30)
