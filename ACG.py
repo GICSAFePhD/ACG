@@ -2358,8 +2358,8 @@ class ACG():
 		if n_signals > 0:  	
 			for signalId in signalData:
 				index = list(signalData.keys()).index(signalId)
-				self.createSignal(index,signalId,signalData[signalId],mode = 'component',f = f)
-				self.createSignal(index,signalId,signalData[signalId],mode = 'entity',f = None, example = example)
+				self.createSignal(index,signalId,signalData,mode = 'component',f = f)
+				self.createSignal(index,signalId,signalData,mode = 'entity',f = None, example = example)
 		# component node
 		if n_netElements > 0:
 			for netElementId in list(graph.keys()):
@@ -2374,30 +2374,40 @@ class ACG():
 				self.createRoute(index,routes[routeId],mode = 'entity',f = None, example = example)
 
 		# intersignals
-		levelCrossings = " , ".join([f'state_{i}' for i in list(levelCrossingData.keys())])
-		f.write(f'\n signal {levelCrossings} : levelCrossingStates;\r')
-		singleSwitches = " , ".join([f'state_{i}' for i in list(singleSwitchData.keys())])
-		f.write(f'\n signal {singleSwitches} : singleSwitchStates;\r')
-		scissorCrossings = " , ".join([f'state_{i}' for i in list(scissorCrossingData.keys())])
-		f.write(f'\n signal {scissorCrossings} : scissorCrossingStates;\r')
-		doubleSwitches = " , ".join([f'state_{i}' for i in list(doubleSwitchData.keys())])
-		f.write(f'\n signal {doubleSwitches} : doubleSwitchStates;\r')
-		signals = " , ".join([f'state_{i}' for i in list(signalData.keys())])
-		f.write(f'\n signal {signals} : signalStates;\r')
+		if n_levelCrossings > 0:
+			levelCrossings = " , ".join([f'state_{i}' for i in list(levelCrossingData.keys())])
+			f.write(f'\n signal {levelCrossings} : levelCrossingStates;\n')
+		if n_switches > 0: 
+			singleSwitches = " , ".join([f'state_{i}' for i in list(singleSwitchData.keys())])
+			f.write(f'\n signal {singleSwitches} : singleSwitchStates;\n')
+		if n_scissorCrossings > 0:
+			scissorCrossings = " , ".join([f'state_{i}' for i in list(scissorCrossingData.keys())])
+			f.write(f'\n signal {scissorCrossings} : scissorCrossingStates;\n')
+		if n_doubleSwitch > 0: 
+			doubleSwitches = " , ".join([f'state_{i}' for i in list(doubleSwitchData.keys())])
+			f.write(f'\n signal {doubleSwitches} : doubleSwitchStates;\n')
+		if n_signals > 0: 
+			signals = " , ".join([f'state_{i}' for i in list(signalData.keys())])
+			f.write(f'\n signal {signals} : signalStates;\n')
 
-		netElements = " , ".join([f'state_{i}' for i in list(graph.keys())])
-		f.write(f'\n signal {netElements} : nodeStates;\r')
-		commands = " , ".join([f'cmd_R{i}_{j}' for i in routes for j in routes[i]['Path']])
-		f.write(f'\n signal {commands} : routeCommands;\r')
-		commands = " , ".join([f'cmd_R{i}_{j}' for i in routes for j in routes[i]['LevelCrossings']])
-		f.write(f'\n signal {commands} : routeCommands;\r')
-		commands = " , ".join([f'cmd_R{i}_{j.split('_')[0]}' for i in routes for j in routes[i]['Switches']])
-		f.write(f'\n signal {commands} : routeCommands;\r')
-		commands = " , ".join([f'cmd_R{i}_{j.split('_')[0]}' for i in routes for j in routes[i]['ScissorCrossings']])
-		f.write(f'\n signal {commands} : routeCommands;\r')
-		commands = " , ".join([f'cmd_R{i}_{routes[i]['Start']}' for i in routes])
-		f.write(f'\n signal {commands} : routeCommands;\r\n')
-		
+		if n_netElements > 0:
+			netElements = " , ".join([f'state_{i}' for i in list(graph.keys())])
+			f.write(f'\n signal {netElements} : nodeStates;\n')
+			commands = " , ".join([f'cmd_R{i}_{j}' for i in routes for j in routes[i]['Path']])
+			f.write(f'\n signal {commands} : routeCommands;\n')
+		if n_levelCrossings > 0:
+			commands = " , ".join([f'cmd_R{i}_{j}' for i in routes for j in routes[i]['LevelCrossings']])
+			f.write(f'\n signal {commands} : routeCommands;\n')
+		if n_switches+n_doubleSwitch > 0: 
+			commands = " , ".join([f'cmd_R{i}_{j.split('_')[0]}' for i in routes for j in routes[i]['Switches']])
+			f.write(f'\n signal {commands} : routeCommands;\n')
+		if n_scissorCrossings > 0:
+			commands = " , ".join([f'cmd_R{i}_{j.split('_')[0]}' for i in routes for j in routes[i]['ScissorCrossings']])
+			f.write(f'\n signal {commands} : routeCommands;\n')
+		if n_signals > 0: 
+			commands = " , ".join([f'cmd_R{i}_{routes[i]['Start']}' for i in routes])
+			f.write(f'\n signal {commands} : routeCommands;\r\n')
+			
 		f.write(f'begin\r\n') 
 
 		#print(list(graph.keys()))
@@ -2712,8 +2722,8 @@ class ACG():
 						signalId[signal]['Path'].append(routes[route]['Path'][1:])						
 
 		#print('')
-		#for signal in signalId:
-		#	print(f'{signal} > {signalId[signal]}')	
+		for signal in signalId:
+			print(f'{signal} > {signalId[signal]}')	
 
 		return signalId
 
@@ -2747,7 +2757,7 @@ class ACG():
 		f.write(f'\t\t\tcommand : out std_logic;\n')
 		f.write(f'\t\t\tcorrespondence_{name} : out levelCrossingStates\n')
 		f.write(f'\t\t);\n')
-		f.write(f'\tend {mode} {levelCrossing};\r\n')
+		f.write(f'\tend {mode} {levelCrossing};\n')
 
 		if mode == 'entity':
 			freeState = " and ".join([f'{i}_command = RELEASE' for i in commands])
@@ -2883,7 +2893,7 @@ class ACG():
 		f.write(f'\t\t\tcommand : out std_logic;\n')
 		f.write(f'\t\t\tcorrespondence_{name} : out singleSwitchStates\n')
 		f.write(f'\t\t);\n')
-		f.write(f'\tend {mode} {singleSwitch};\r\n')
+		f.write(f'\tend {mode} {singleSwitch};\n')
 
 		if mode == 'entity':
 			freeState = " and ".join([f'{i}_command = RELEASE' for i in commands])
@@ -3035,7 +3045,7 @@ class ACG():
 		f.write(f'\t\t\tcommand : out dSwitch_type;\n')
 		f.write(f'\t\t\tcorrespondence_{name} : out doubleSwitchStates\n')
 		f.write(f'\t\t);\n')
-		f.write(f'\tend {mode} {doubleSwitch};\r\n')
+		f.write(f'\tend {mode} {doubleSwitch};\n')
 
 		if mode == 'entity':
 			freeState = " and ".join([f'{i}_command = RELEASE' for i in commands])
@@ -3227,7 +3237,7 @@ class ACG():
 		f.write(f'\t\t\tcommand : out std_logic;\n')
 		f.write(f'\t\t\tcorrespondence_{name} : out scissorCrossingStates\n')
 		f.write(f'\t\t);\n')
-		f.write(f'\tend {mode} {scissorCrossing};\r\n')
+		f.write(f'\tend {mode} {scissorCrossing};\n')
 
 		if mode == 'entity':
 			freeState = " and ".join([f'{i}_command = RELEASE' for i in commands])
@@ -3365,17 +3375,73 @@ class ACG():
 
 		if 'Routes' in data:
 			for element in range(len(data['Routes'])):
-				f.write(f'\t\t\t{data['Routes'][element]}_command : in routeCommands;\n')
-				commands.append(data['Routes'][element])
+				f.write(f'\t\t\t{data[name]['Routes'][element]}_command : in routeCommands;\n')
+				commands.append(data[name]['Routes'][element])
 				#if data['Position'][element] == 'NN':
 				#	commands_NN.append(data['Routes'][element])
-	
+		
+		ocupationLevel_0 = data[name]['Start']
+		signal_0 = name
+		f.write(f'\t\t\t--Ocupation level 0\n')	
+		f.write(f'\t\t\tocupation_{ocupationLevel_0} : in std_logic;\n')	
+		f.write(f'\t\t\tcorrespondence_{signal_0} : out signalStates;\n')
+
+		ocupationLevel_1 = []
+		subLevel_order = []
+		signal_1 = []
+		# level 1
+		if 'Path' in data[name]:
+			subLevel = [item for sublist in data[name]['Path'] for item in sublist]
+			for item in subLevel:
+				if item not in subLevel_order:
+					subLevel_order.append(item)
+			for i in subLevel_order:
+				if i not in ocupationLevel_1:
+					ocupationLevel_1.append(i)
+			for j in data[name]['Next']:
+				if j not in signal_1:
+					signal_1.append(j)
+		if len(ocupationLevel_1) > 1:
+			f.write(f'\t\t\t--Ocupation level 1\n')	
+			for i in ocupationLevel_1:
+				if i != ocupationLevel_0:
+					f.write(f'\t\t\tocupation_{i} : in std_logic;\n')	
+			for j in signal_1:
+				if j != signal_0:
+					f.write(f'\t\t\tcorrespondence_{j} : out signalStates;\n')
+
+		ocupationLevel_2 = []
+		signal_2 = []
+		# level 2
+		if 'Next' in data[name]:
+			for next in data[name]['Next']:
+				if data[next]['Start'] not in ocupationLevel_2:
+					ocupationLevel_2.append(data[next]['Start'])
+				if 'Path' in data[next]:
+					sub_level = list(set([item for sublist in data[next]['Path'] for item in sublist]))
+					for i in sub_level:
+						if i not in ocupationLevel_2:
+							ocupationLevel_2.append(i)
+					for j in data[next]['Next']:
+						if j not in signal_2:
+							signal_2.append(j)
+
+		if len(ocupationLevel_2) > 1:
+			f.write(f'\t\t\t--Ocupation level 2\n')	
+			for i in ocupationLevel_2:
+				if i != ocupationLevel_0 and i not in ocupationLevel_1:
+					f.write(f'\t\t\tocupation_{i} : in std_logic;\n')	
+			for j in signal_2:
+				if j != signal_0 and j not in signal_1:
+					f.write(f'\t\t\tcorrespondence_{j} : out signalStates;\n')
+
+
 
 		f.write(f'\t\t\tindication : in signal_type;\n')
-		f.write(f'\t\t\tcommand : out signal_type;\n')
-		f.write(f'\t\t\tcorrespondence_{name} : out signalStates\n')
+		f.write(f'\t\t\tcommand : out signal_type\n')
+		
 		f.write(f'\t\t);\n')
-		f.write(f'\tend {mode} {railwaySignal};\r\n')
+		f.write(f'\tend {mode} {railwaySignal};\n')
 
 		if mode == 'entity':
 			f.write(f'architecture Behavioral of {node} is\r\n')
@@ -3412,7 +3478,7 @@ class ACG():
 
 		f.write(f'\t\t\tstate : out nodeStates\n')
 		f.write(f'\t\t);\n')
-		f.write(f'\tend {mode} {node};\r\n')
+		f.write(f'\tend {mode} {node};\n')
 
 		if mode == 'entity':
 			freeState = " and ".join([f'{i}_command = RELEASE' for i in commands])
@@ -3494,7 +3560,7 @@ class ACG():
 
 		f.write(f'\t\t\trouteState : out std_logic\n')
 		f.write(f'\t\t);\n')
-		f.write(f'\tend {mode} {node};\r\n')
+		f.write(f'\tend {mode} {node};\n')
 
 		if mode == 'entity':
 			f.write(f'architecture Behavioral of {node} is\r\n')
