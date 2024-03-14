@@ -2495,8 +2495,6 @@ class ACG():
 				f.write(f'indication => signals_i, command => signals_o, ')
 			f.write(f'correspondence_{signalId} => state_{signalId});\r\n')
 				
-
-
 		# instantiate nodes
 		for netElementId in list(graph.keys()):
 			index = list(graph.keys()).index(netElementId)
@@ -2633,14 +2631,14 @@ class ACG():
 
 		for scissorCrossing in scissorCrossingId:
 			for route in routes:
-				if scissorCrossing+'_N' in routes[route]['ScissorCrossings']:
+				if scissorCrossing+'_XN' in routes[route]['ScissorCrossings']:
 					if 'Routes' not in scissorCrossingId[scissorCrossing]:
 						scissorCrossingId[scissorCrossing] |= {'Routes':[]}
 						scissorCrossingId[scissorCrossing] |= {'Position':[]}
 					if route not in scissorCrossingId[scissorCrossing]['Routes']:
 						scissorCrossingId[scissorCrossing]['Routes'].append(f'R{route}')
 						scissorCrossingId[scissorCrossing]['Position'].append(f'N')
-				if scissorCrossing+'_R' in routes[route]['ScissorCrossings']:
+				if scissorCrossing+'_XR' in routes[route]['ScissorCrossings']:
 					if 'Routes' not in scissorCrossingId[scissorCrossing]:
 						scissorCrossingId[scissorCrossing] |= {'Routes':[]}
 						scissorCrossingId[scissorCrossing] |= {'Position':[]}
@@ -2704,6 +2702,7 @@ class ACG():
 						signalId[signal] |= {'Start':element}
 
 		for signal in signalId:
+			switch_aux = []
 			for route in routes:
 				if signal == routes[route]['Start']:
 					if 'Routes' not in signalId[signal]:
@@ -2716,12 +2715,24 @@ class ACG():
 					if routes[route]['Path'][1:] not in signalId[signal]['Next']:
 						signalId[signal]['Next'].append(routes[route]['End'])
 
+					if 'Switches' not in signalId[signal]:
+						signalId[signal] |= {'Switches':[]}
+
+					if routes[route]['Switches'] != [] or routes[route]['ScissorCrossings'] != []:
+
+						if routes[route]['Switches'] != [] and routes[route]['Switches'] not in switch_aux:
+							switch_aux.append(routes[route]['Switches'])
+						if routes[route]['ScissorCrossings'] != [] and routes[route]['ScissorCrossings'] not in switch_aux:
+							switch_aux.append(routes[route]['ScissorCrossings'])
+
+					signalId[signal]['Switches'] = switch_aux
+
 					if 'Path' not in signalId[signal]:
 						signalId[signal] |= {'Path':[]}
 					if routes[route]['Path'][1:] not in signalId[signal]['Path']:
 						signalId[signal]['Path'].append(routes[route]['Path'][1:])						
 
-		#print('')
+		print('')
 		for signal in signalId:
 			print(f'{signal} > {signalId[signal]}')	
 
@@ -3389,6 +3400,8 @@ class ACG():
 		ocupationLevel_1 = []
 		subLevel_order = []
 		signal_1 = []
+		switches_1 = []
+		sub_switch_order = []
 		# level 1
 		if 'Path' in data[name]:
 			subLevel = [item for sublist in data[name]['Path'] for item in sublist]
@@ -3401,6 +3414,15 @@ class ACG():
 			for j in data[name]['Next']:
 				if j not in signal_1:
 					signal_1.append(j)
+
+			sub_switch = [item for sublist in data[name]['Switches'] for item in sublist]	
+			for item in sub_switch:
+				if item not in sub_switch_order:
+					sub_switch_order.append(item)
+			for i in sub_switch_order:
+				if i.split('_')[0] not in switches_1:
+					switches_1.append(i.split('_')[0])
+
 		if len(ocupationLevel_1) > 1:
 			f.write(f'\t\t\t--Ocupation level 1\n')	
 			for i in ocupationLevel_1:
@@ -3409,9 +3431,13 @@ class ACG():
 			for j in signal_1:
 				if j != signal_0:
 					f.write(f'\t\t\tcorrespondence_{j} : out signalStates;\n')
+			for k in switches_1:
+				f.write(f'\t\t\t{k}_state : out singleSwitchStates;\n')
 
 		ocupationLevel_2 = []
 		signal_2 = []
+		switches_2 = []
+		sub_switch_order = []
 		# level 2
 		if 'Next' in data[name]:
 			for next in data[name]['Next']:
@@ -3426,6 +3452,15 @@ class ACG():
 						if j not in signal_2:
 							signal_2.append(j)
 
+				if 'Switches' in data[next]:
+					sub_switch = [item for sublist in data[next]['Switches'] for item in sublist]	
+					for item in sub_switch:
+						if item not in sub_switch_order:
+							sub_switch_order.append(item)
+					for i in sub_switch_order:
+						if i.split('_')[0] not in switches_2:
+							switches_2.append(i.split('_')[0])
+						
 		if len(ocupationLevel_2) > 1:
 			f.write(f'\t\t\t--Ocupation level 2\n')	
 			for i in ocupationLevel_2:
@@ -3434,7 +3469,9 @@ class ACG():
 			for j in signal_2:
 				if j != signal_0 and j not in signal_1:
 					f.write(f'\t\t\tcorrespondence_{j} : out signalStates;\n')
-
+			for k in switches_2:
+				if k not in switches_1:
+					f.write(f'\t\t\t{k}_state : in singleSwitchStates;\n')
 
 
 		f.write(f'\t\t\tindication : in signal_type;\n')
