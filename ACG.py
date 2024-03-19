@@ -2794,7 +2794,7 @@ class ACG():
 		print('')
 		for signal in signalId:
 			print(f'{signal} > {signalId[signal]}')	
-
+		print('')
 		return signalId
 
 	def createLevelCrossing(self,index,name,data,mode, f = None,example = 1):	
@@ -3601,13 +3601,13 @@ class ACG():
 		f.write(f'\tend {mode} {railwaySignal};\n')
 
 		if mode == 'entity':
-			print(f'{name} > {paths}')	
+			print(f'{name}')
+			for path in paths:
+				print(f'\t{paths[path]}')	
 
 			freeState = " and ".join([f'{i}_command = RELEASE' for i in commands])
 			reserveState = " or ".join([f'{i}_command = RESERVE' for i in commands])
 			lockState = " or ".join([f'{i}_command = LOCK' for i in commands])
-
-
 
 			freq = 10e6
 			timeout = 7
@@ -3675,43 +3675,53 @@ class ACG():
 			else:
 				f.write(f'\tlock_{name} <= LOCKED;\n')
 
-			f.write(f'\n\tprocess(commandState)\r\n')
-			f.write(f'\tbegin\r\n')
-			f.write(f'\t\tcase commandState is\r\n')
-			f.write(f'\t\t\twhen RELEASE | LOCK =>\r\n')
+			if paths != {}:
+				f.write(f'\n\tprocess(commandState)\r\n')
+				f.write(f'\tbegin\r\n')
+				f.write(f'\t\tcase commandState is\r\n')
+				f.write(f'\t\t\twhen RELEASE | LOCK =>\r\n')
 
-			sw_conditions = []
-	
-			sw_dict = {'N':'NORMAL','R':'REVERSE','NN':'DOUBLE_NORMAL','RR':'DOUBLE_REVERSE','RN':'REVERSE_NORMAL','NR':'NORMAL_REVERSE','XN':'NORMAL','XR':'REVERSE'}
+				sw_conditions = []
+				sw_dict = {'N':'NORMAL','R':'REVERSE','NN':'DOUBLE_NORMAL','RR':'DOUBLE_REVERSE','RN':'REVERSE_NORMAL','NR':'NORMAL_REVERSE','XN':'NORMAL','XR':'REVERSE'}
+				for path in paths:
+					if 'Switches' in paths[path]:
+						sw_conditions.append(" and ".join(f'{x.split('_')[0]}_state = {sw_dict[x.split('_')[1]]}' for x in paths[path]['Switches']))
 
-			for path in paths:
-				if 'Switches' in paths[path]:
-					sw_conditions.append(" and ".join(f'{x.split('_')[0]}_state = {sw_dict[x.split('_')[1]]}' for x in paths[path]['Switches']))
+				if sw_conditions != ['']: #TODO EDIT TO DO LC OUTSIDE
+					f.write(f'\t\t\t\tif ({" or ".join([f"({sw_condition})" for sw_condition in sw_conditions])}) then\r\n')
 
-			f.write(f'\t\t\t\tif ({" or ".join([f"({sw_condition})" for sw_condition in sw_conditions])}) then\r\n')
+					for sw_condition in range(len(sw_conditions)):	
+						conditions = sw_conditions[sw_condition]
+						if 'LevelCrossings' in paths[sw_condition+1] and paths[sw_condition+1]['LevelCrossings'] != []:
+							lc_condition = " and ".join(f'{x}_state = DOWN' for x in paths[sw_condition+1]['LevelCrossings'] if x != [])
+							conditions = conditions + f' and ({lc_condition})'	
+							
+						f.write(f'\t\t\t\t\tif ({conditions}) then\r\n')
+						f.write(f'\t\t\t\t\t\tpath <= {sw_condition+1};\n')
+						f.write(f'\t\t\t\t\tend if;\r\n')
 
-			for sw_condition in range(len(sw_conditions)):	
-				conditions = sw_conditions[sw_condition]
-				if 'LevelCrossings' in paths[sw_condition+1] and paths[sw_condition+1]['LevelCrossings'] != []:
-					lc_condition = " and ".join(f'{x}_state = DOWN' for x in paths[sw_condition+1]['LevelCrossings'] if x != [])
-					conditions = conditions + f' and ({lc_condition})'	
-					
-				f.write(f'\t\t\t\t\tif ({conditions}) then\r\n')
-				f.write(f'\t\t\t\t\t\tpath <= {sw_condition+1};\n')
-				f.write(f'\t\t\t\t\tend if;\r\n')
+						
+				else:
+					f.write(f'\t\t\t\tpath <= 1;\n')
 
-			f.write(f'\t\t\t\telse\r\n')
-			f.write(f'\t\t\t\t\tpath <= 0;\n')
-			f.write(f'\t\t\t\tend if;\r\n')
+				if sw_conditions != ['']:
+					f.write(f'\t\t\t\telse\r\n')
+					f.write(f'\t\t\t\t\tpath <= 0;\n')
+					f.write(f'\t\t\t\tend if;\r\n')
 
-			f.write(f'\t\t\twhen RESERVE =>\r\n')
-			f.write(f'\t\t\t\tpath <= 0;\n')				
-			f.write(f'\t\t\twhen others =>\r\n')
-			f.write(f'\t\t\t\tpath <= 0;\n')
-			f.write(f'\t\tend case;\r\n')
-			f.write(f'\tend process;\r\n') 
+				f.write(f'\t\t\twhen RESERVE =>\r\n')
+				f.write(f'\t\t\t\tpath <= 0;\n')				
+				f.write(f'\t\t\twhen others =>\r\n')
+				f.write(f'\t\t\t\tpath <= 0;\n')
+				f.write(f'\t\tend case;\r\n')
+				f.write(f'\tend process;\r\n') 
+			else:
+				if name[0] == 'T':
+					f.write(f'\taspectState <= RED;\r\n')
+				if name[0] == 'L':
+					f.write(f'\taspectState <= DOUBLE_YELLOW;\r\n')
 
-
+			'''
 			f.write(f'\n\tprocess(clock)\r\n')
 			f.write(f'\tbegin\r\n')
 			f.write(f'\t\tif (clock = \'1\' and clock\'Event) then\r\n')
@@ -3743,6 +3753,7 @@ class ACG():
 	
 			f.write(f'\t\tend if;\r\n')
 			f.write(f'\tend process;\r\n') 
+			'''
 
 			'''
 			If ocupado
@@ -3930,33 +3941,32 @@ class ACG():
 							for k in net:
 								paths[path]['Path'].append(k)
 			else:
-				path = path + 1
-				levelCrossing = []
-				for k in data[name]['LevelCrossings']:
-					for n in k:
-						if n != []:
-							levelCrossing.append(n)
+				if 'Next' in data[name]:
+					path = path + 1		
+					paths[path] = {'Switches':[],'Path':[],'LevelCrossings':[],'Signals':[]}
+					
+					next = data[name]['Next'][0]
+					
+					paths[path]['Path'].append(data[name]['Start'])
+					
+					if 'LevelCrossings' in data[name]:
+						for i in data[name]['LevelCrossings'][0]:
+							if i != []:
+								paths[path]['LevelCrossings'].append(i)
 
-				if data[name]['Path'] != [[]]:
-					newPath = data[name]['Path']
-				else:
-					newPath = [data[name]['Start']]
-
-				newSignal = [name,data[name]['Next'][0]]
-				newSwitch = []
-				if 'Next' in data[name] and 'Next' in data[data[name]['Next'][0]]:
-					for i in data[data[name]['Next'][0]]['Path'][0]:
-						newPath.append(i)
-				
-					newSignal.append(data[data[name]['Next'][0]]['Next'][0])
-				
-
-				if 'Switches' in data[data[name]['Next'][0]]:
-					#print(f'---------------------{data[data[name]['Next'][0]]['Switches'][0]}')
-					for j in data[data[name]['Next'][0]]['Switches'][0]:
-						newSwitch.append(j)
-				paths[path] = {'Switches':newSwitch,'Path':newPath,'LevelCrossings':levelCrossing,'Signals':newSignal}
-
+					paths[path]['Signals'].append(name)
+					paths[path]['Signals'].append(next)
+					
+					if 'Switches' in data[next]:
+						for i in range(len(data[next]['Switches'])):
+							paths[path+i] = paths[path]	
+							paths[path+i]['Signals'].append(data[next]['Next'][i])
+							for j in data[next]['Switches'][i]:
+								paths[path+i]['Switches'].append(j)
+							for j in data[next]['Path'][i]:
+								paths[path+i]['Path'].append(j)
+							for j in data[next]['LevelCrossings'][i]:
+								paths[path+i]['LevelCrossings'].append(j)
 
 			for item in sub_switch:
 				if item not in sub_switch_order:
@@ -3964,7 +3974,11 @@ class ACG():
 			for i in sub_switch_order:
 				if i not in switches_1:
 					switches_1.append(i)
-					
+
+		#print(f'{name}')
+		#for path in paths:
+		#	print(f'\t{path} {paths[path]}')	
+
 		ocupationLevel_2 = []
 		signal_2 = []
 		switches_2 = []
