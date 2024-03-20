@@ -2526,13 +2526,25 @@ class ACG():
 					if i not in signal_1:
 						f.write(f'correspondence_{i} => state_{i}, ')
 
-			if switches_1 != []:
-				for i in switches_1:
+			sw_print = []
+			for path in paths:
+				if paths[path]['Switches'] != []:
+					for i in paths[path]['Switches']:
+						if i.split('_')[0] not in sw_print:
+							sw_print.append(i.split('_')[0])
+			if sw_print != []:
+				for i in sw_print:
 					f.write(f'{"s" if i[0].isdigit() else ""}{i.split('_')[0]}_state => state_{i.split('_')[0]}, ')	
-			if switches_2 != []:
-				for i in switches_2:
-					if i not in switches_1:
-						f.write(f'{"s" if i[0].isdigit() else ""}{i.split('_')[0]}_state => state_{i.split('_')[0]}, ')	
+
+			lc_print = []
+			for path in paths:
+				if paths[path]['LevelCrossings'] != []:
+					for i in paths[path]['LevelCrossings']:
+						if i not in lc_print:
+							lc_print.append(i.split('_')[0])
+			if lc_print != []:
+				for i in lc_print:
+					f.write(f'{i}_state => state_{i}, ')	
 
 			if n_signals > 1:
 				f.write(f'indication.msb => signals_i.msb({index}), indication.lsb => signals_i.lsb({index}), ')
@@ -3682,29 +3694,39 @@ class ACG():
 				f.write(f'\t\t\twhen RELEASE | LOCK =>\r\n')
 
 				sw_conditions = []
+				lc_conditions = []
 				sw_dict = {'N':'NORMAL','R':'REVERSE','NN':'DOUBLE_NORMAL','RR':'DOUBLE_REVERSE','RN':'REVERSE_NORMAL','NR':'NORMAL_REVERSE','XN':'NORMAL','XR':'REVERSE'}
 				for path in paths:
 					if 'Switches' in paths[path]:
 						sw_conditions.append(" and ".join(f'{x.split('_')[0]}_state = {sw_dict[x.split('_')[1]]}' for x in paths[path]['Switches']))
+				for path in paths:
+					if 'LevelCrossings' in paths[path] and paths[path]['LevelCrossings'] != []:
+						lc_conditions.append(" and ".join(f'{x}_state = DOWN' for x in paths[path]['LevelCrossings'] if x != None))
+					else:
+						lc_conditions.append(None)
 
-				if sw_conditions != ['']: #TODO EDIT TO DO LC OUTSIDE
-					f.write(f'\t\t\t\tif ({" or ".join([f"({sw_condition})" for sw_condition in sw_conditions])}) then\r\n')
+				#f.write(f'{sw_conditions} {lc_conditions}\r\n')			
 
-					for sw_condition in range(len(sw_conditions)):	
-						conditions = sw_conditions[sw_condition]
-						if 'LevelCrossings' in paths[sw_condition+1] and paths[sw_condition+1]['LevelCrossings'] != []:
-							lc_condition = " and ".join(f'{x}_state = DOWN' for x in paths[sw_condition+1]['LevelCrossings'] if x != [])
-							conditions = conditions + f' and ({lc_condition})'	
+				main_conditions = [f"{x} and {y}" if x is not '' and y is not None else x or y for x, y in zip(sw_conditions, lc_conditions)]
+
+				#f.write(f'{main_conditions}\r\n')
+
+				if main_conditions != [None]:
+					f.write(f'\t\t\t\tif ({" or ".join([f"({main_condition})" for main_condition in main_conditions])}) then\r\n')
+
+					for condition in range(len(main_conditions)):	
+						conditions = main_conditions[condition]
+						#if 'LevelCrossings' in paths[sw_condition+1] and paths[sw_condition+1]['LevelCrossings'] != []:
+						#	lc_condition = " and ".join(f'{x}_state = DOWN' for x in paths[sw_condition+1]['LevelCrossings'] if x != [])
+						#	conditions = conditions + f' and ({lc_condition})'	
 							
 						f.write(f'\t\t\t\t\tif ({conditions}) then\r\n')
-						f.write(f'\t\t\t\t\t\tpath <= {sw_condition+1};\n')
-						f.write(f'\t\t\t\t\tend if;\r\n')
-
-						
+						f.write(f'\t\t\t\t\t\tpath <= {condition+1};\n')
+						f.write(f'\t\t\t\t\tend if;\r\n')		
 				else:
 					f.write(f'\t\t\t\tpath <= 1;\n')
 
-				if sw_conditions != ['']:
+				if main_conditions != [None]:
 					f.write(f'\t\t\t\telse\r\n')
 					f.write(f'\t\t\t\t\tpath <= 0;\n')
 					f.write(f'\t\t\t\tend if;\r\n')
@@ -3856,7 +3878,7 @@ class ACG():
 			f.write(f'end Behavioral;') 
 			f.close()  # Close header file
 		
-	def getSignalGraph(self,name,data): #TODO FIX T02 T04 T06
+	def getSignalGraph(self,name,data):
 		ocupationLevel_0 = data[name]['Start']
 		signal_0 = name
 
@@ -3906,10 +3928,9 @@ class ACG():
 									paths[path]['Switches'].append(k)
 
 								if 'LevelCrossings' in data[name]:
-									for k in data[name]['LevelCrossings']:
-										for n in k:
-											if n != []:
-												paths[path]['LevelCrossings'].append(n)
+									for k in data[name]['LevelCrossings'][i]:
+										if k != []:
+											paths[path]['LevelCrossings'].append(k)
 
 								for k in data[next]['Path'][j]:
 									paths[path]['Path'].append(k)
