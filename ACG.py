@@ -3742,40 +3742,50 @@ class ACG():
 					f.write(f'\taspectState <= RED;\r\n')
 				if name[0] == 'L':
 					f.write(f'\taspectState <= DOUBLE_YELLOW;\r\n')
-
-			'''
-			f.write(f'\n\tprocess(clock)\r\n')
-			f.write(f'\tbegin\r\n')
-			f.write(f'\t\tif (clock = \'1\' and clock\'Event) then\r\n')
-
-			f.write(f'\t\t\tcase path is\r\n')
-			f.write(f'\t\t\t\twhen 0 =>\r\n')
-			f.write(f'\t\t\t\t\taspectState <= RED;\r\n')
-			for i in range(len(sw_conditions)):
-				f.write(f'\t\t\t\twhen {i+1} =>\r\n')
 			
-				if 'Path' in paths[i+1]:
-					fullPath = paths[i+1]['Path'][1:]
-					stop = data[paths[i+1]['Signals'][-1]]['Start']
+			if paths != {}:
+				f.write(f'\n\tprocess(clock)\r\n')
+				f.write(f'\tbegin\r\n')
+				f.write(f'\t\tif (clock = \'1\' and clock\'Event) then\r\n')
+
+				f.write(f'\t\t\tcase path is\r\n')
+				f.write(f'\t\t\t\twhen 0 =>\r\n')
+				f.write(f'\t\t\t\t\taspectState <= RED;\r\n')
+				for i in range(len(paths)):
+					f.write(f'\t\t\t\twhen {i+1} =>\r\n')
+				
 					
-					subPath = [j for j in fullPath if (fullPath.index(j) < fullPath.index(stop) if stop in fullPath else len(fullPath))]
+					if 'Share' not in paths[path]:
+						conditions = " or ".join(f'ocupation_{x} = \'0\'' for x in paths[i+1]['Subpath'])
+						f.write(f'\t\t\t\t\tif ({conditions}) then\r\n')
+						f.write(f'\t\t\t\t\t\taspectState <= RED;\r\n')
+						# ELSE!!!
+						f.write(f'\t\t\t\t\tend if;\r\n')
+					else:
+						f.write(f'\t\t\t\t\tif (OTRA COSA) then\r\n')
 
-					conditions = " or ".join(f'ocupation_{x} = \'0\'' for x in subPath)
+					#if 'Path' in paths[i+1]:
+					#	fullPath = paths[i+1]['Path'][1:]
+					#	stop = data[paths[i+1]['Signals'][-1]]['Start']
+						
+					#	subPath = [j for j in fullPath if (fullPath.index(j) < fullPath.index(stop) if stop in fullPath else len(fullPath))]
+
+					#	conditions = " or ".join(f'ocupation_{x} = \'0\'' for x in subPath)
 
 
-				f.write(f'\t\t\t\t\tif ({conditions}) then\r\n')
-				f.write(f'\t\t\t\t\t\taspectState <= RED;\r\n')
-				#f.write(f'\t\t\t\t\telse\r\n')
+					#f.write(f'\t\t\t\t\tif ({conditions}) then\r\n')
+					#f.write(f'\t\t\t\t\t\taspectState <= RED;\r\n')
+					#f.write(f'\t\t\t\t\telse\r\n')
 
-				f.write(f'\t\t\t\t\tend if;\r\n')
+					#f.write(f'\t\t\t\t\tend if;\r\n')
 
-			f.write(f'\t\t\t\twhen others =>\r\n')
+				f.write(f'\t\t\t\twhen others =>\r\n')
+				
+				f.write(f'\t\t\tend case;\r\n')
+		
+				f.write(f'\t\tend if;\r\n')
+				f.write(f'\tend process;\r\n') 
 			
-			f.write(f'\t\t\tend case;\r\n')
-	
-			f.write(f'\t\tend if;\r\n')
-			f.write(f'\tend process;\r\n') 
-			'''
 
 			'''
 			If ocupado
@@ -3995,6 +4005,12 @@ class ACG():
 			for i in sub_switch_order:
 				if i not in switches_1:
 					switches_1.append(i)
+
+		for path in paths:
+			if 'Path' in paths[path]:
+				paths[path]['Subpath'] = paths[path]['Path'][1:]
+			if paths[path]['Path'][0] == data[paths[path]['Signals'][1]]['Start']:
+				paths[path]['Share'] = True
 
 		#print(f'{name}')
 		#for path in paths:
