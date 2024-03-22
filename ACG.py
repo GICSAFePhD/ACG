@@ -3756,7 +3756,7 @@ class ACG():
 				
 					
 					if 'Share' not in paths[path]:
-						conditions = " or ".join(f'ocupation_{x} = \'0\'' for x in paths[i+1]['Subpath'])
+						conditions = " or ".join(f'ocupation_{x} = \'0\'' for x in paths[i+1]['FirstPath'])
 						f.write(f'\t\t\t\t\tif ({conditions}) then\r\n')
 						f.write(f'\t\t\t\t\t\taspectState <= RED;\r\n')
 						# ELSE!!!
@@ -4008,9 +4008,19 @@ class ACG():
 
 		for path in paths:
 			if 'Path' in paths[path]:
-				paths[path]['Subpath'] = paths[path]['Path'][1:]
-			if paths[path]['Path'][0] == data[paths[path]['Signals'][1]]['Start']:
-				paths[path]['Share'] = True
+				if paths[path]['Path'][0] == data[paths[path]['Signals'][1]]['Start']:
+					paths[path]['Share'] = True
+				else:
+					paths[path]['Share'] = False
+					fullPath = paths[path]['Path'][1:]
+					stop = data[paths[path]['Signals'][1]]['Start']
+							
+					firstPath = [j for j in fullPath if (fullPath.index(j) <= fullPath.index(stop) if stop in fullPath else len(fullPath))]
+					secondPath = [j for j in fullPath if (fullPath.index(j) > fullPath.index(stop) if stop in fullPath else len(fullPath))]
+
+					paths[path]['FirstPath'] = firstPath
+					paths[path]['SecondPath'] = secondPath
+			
 
 		#print(f'{name}')
 		#for path in paths:
