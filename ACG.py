@@ -2461,6 +2461,7 @@ class ACG():
 				f.write(f'indication => singleSwitches_i({index}), command => singleSwitches_o({index}), ')
 			if n_switches == 1:
 				f.write(f'indication => singleSwitches_i, command => singleSwitches_o, ')
+			f.write(f'lock_{singleSwitchId} => {singleSwitchId}_locking, ')	
 			f.write(f'correspondence_{singleSwitchId} => state_{singleSwitchId});\r\n')
 
 		# instantiate scissorCrossings
@@ -2476,6 +2477,7 @@ class ACG():
 				f.write(f'indication => scissorCrossings_i({index}), command => scissorCrossings_o({index}), ')
 			if n_scissorCrossings == 1:
 				f.write(f'indication => scissorCrossings_i, command => scissorCrossings_o, ')
+			f.write(f'lock_{scissorCrossingId} => {scissorCrossingId}_locking, ')	
 			f.write(f'correspondence_{scissorCrossingId} => state_{scissorCrossingId});\r\n')
 
 		# instantiate doubleSwitches
@@ -2492,6 +2494,7 @@ class ACG():
 				f.write(f'command.msb => doubleSwitches_o.msb({index}), command.lsb => doubleSwitches_o.lsb({index}),')
 			if n_doubleSwitch == 1:
 				f.write(f'indication => doubleSwitches_i, command => doubleSwitches_o, ')
+			f.write(f'lock_{doubleSwitchId} => {doubleSwitchId}_locking, ')	
 			f.write(f'correspondence_{doubleSwitchId} => state_{doubleSwitchId});\r\n')
 
 		# instantiate signals
@@ -2607,6 +2610,8 @@ class ACG():
 			#f.write(f'{routes[routeId]['End']}_command => cmd_R{routeId}_{routes[routeId]['End']}, ')	
 
 			f.write(f'routeState => routes_o({index}));\r\n')
+
+		f.write(f'\tprocessed <= processing;\r\n') #TODO Maybe it could be necessary to make it wait for routes locking or not.
 
 		f.write(f'end Behavioral;') 
     
@@ -3775,7 +3780,6 @@ class ACG():
 							f.write(f'\t\t\t\t\t\taspectState <= {signal_dict[j]};\r\n')
 							f.write(f'\t\t\t\t\tend if;\r\n')
 
-
 				f.write(f'\t\t\t\twhen others =>\r\n')
 				f.write(f'\t\t\t\t\taspectState <= RED;\r\n')
 				f.write(f'\t\t\tend case;\r\n')
@@ -3783,23 +3787,6 @@ class ACG():
 				f.write(f'\t\tend if;\r\n')
 				f.write(f'\tend process;\r\n') 
 			
-
-			
-			
-
-			#f.write(f'\t\t\t\t\tif (ocupation_{ocupationLevel_0} = \'0\') then\r\n')
-			#f.write(f'\t\t\t\t\taspectState <= RED;\r\n')
-			#f.write(f'\t\t\ttend if;\r\n')
-
-
-
-
-
-
-
-
-
-
 			f.write(f'\n\tprocess(clock)\r\n')
 			f.write(f'\tbegin\r\n')
 			f.write(f'\t\tif (clock = \'1\' and clock\'Event) then\r\n')
