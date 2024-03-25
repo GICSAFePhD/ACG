@@ -4323,18 +4323,37 @@ class ACG():
 			f.write(f'\t\t\t\t\troutingState <= RELEASING_TRACKS;\n')
 			f.write(f'\t\t\t\tend if;\r\n')
 			
+			lcLocksReserved = " and ".join([f'{i}_lock = RESERVED' for i in route['LevelCrossings']])
+
 			if route['LevelCrossings'] != []:
 				lcLocksReleased = " and ".join([f'{i}_lock = RELEASED' for i in route['LevelCrossings']])
-				lcLocksReserved = " and ".join([f'{i}_lock = RESERVED' for i in route['LevelCrossings']])
 
 				f.write(f'\t\t\t\tif ({lcLocksReleased}) then\r\n')
-				for net in route['LevelCrossings']:
-					f.write(f'\t\t\t\t\t{net}_command <= RESERVE;\n')
+				for levelCrossing in route['LevelCrossings']:
+					f.write(f'\t\t\t\t\t{levelCrossing}_command <= RESERVE;\n')
 				f.write(f'\t\t\t\t\trestart <= \'0\';\r\n')
 				f.write(f'\t\t\t\tend if;\r\n')
-				f.write(f'\t\t\t\tif ({lcLocksReserved})then\r\n')
+
+			scLocksReserved = " and ".join([f'{i.split('_')[0]}_lock = RESERVED' for i in route['ScissorCrossings']])
+
+			if route['ScissorCrossings'] != []:
+				scLocksReleased = " and ".join([f'{i.split('_')[0]}_lock = RELEASED' for i in route['ScissorCrossings']])
+
+				f.write(f'\t\t\t\tif ({scLocksReleased}) then\r\n')
+				for scissorCrossing in route['ScissorCrossings']:
+					f.write(f'\t\t\t\t\t{scissorCrossing.split('_')[0]}_command <= RESERVE;\n')
+
+				f.write(f'\t\t\t\t\trestart <= \'0\';\r\n')
+				f.write(f'\t\t\t\tend if;\r\n')
+
+			infraestructure = [lcLocksReserved, scLocksReserved]
+			generalReserve = " and ".join(s for s in infraestructure if s)
+			if infraestructure != ['','']:
+				f.write(f'\t\t\t\tif ({generalReserve})then\r\n')
 				f.write(f'\t\t\t\t\troutingState <= LOCKING_INFRASTRUCTURE;\n')
 				f.write(f'\t\t\t\tend if;\r\n')
+			else:
+				f.write(f'\t\t\t\troutingState <= LOCKING_INFRASTRUCTURE;\n')
 
 			f.write(f'\t\t\twhen LOCKING_INFRASTRUCTURE =>\r\n')
 
@@ -4344,23 +4363,42 @@ class ACG():
 			f.write(f'\t\t\t\t\troutingState <= RELEASING_INFRASTRUCTURE;\n')
 			f.write(f'\t\t\t\tend if;\r\n')
 			
+			lcLocksLocked = " and ".join([f'{i}_lock = LOCKED' for i in route['LevelCrossings']])
+
 			if route['LevelCrossings'] != []:
 				lcLocksReleased = " and ".join([f'{i}_lock = RELEASED' for i in route['LevelCrossings']])
 				lcLocksReserved = " and ".join([f'{i}_lock = RESERVED' for i in route['LevelCrossings']])
-				lcLocksLocked = " and ".join([f'{i}_lock = LOCKED' for i in route['LevelCrossings']])
-
-				lcStatesUp = " and ".join([f'{i}_state = UP' for i in route['LevelCrossings']])
+				
 				lcStatesDown = " and ".join([f'{i}_state = DOWN' for i in route['LevelCrossings']])
-				lcStatesTransition = " and ".join([f'{i}_state = TRANSITION' for i in route['LevelCrossings']])
 
 				f.write(f'\t\t\t\tif ({lcLocksReserved} and {lcStatesDown}) then\r\n')
-				for net in route['LevelCrossings']:
-					f.write(f'\t\t\t\t\t{net}_command <= LOCK;\n')
+				for levelCrossing in route['LevelCrossings']:
+					f.write(f'\t\t\t\t\t{levelCrossing}_command <= LOCK;\n')
 				f.write(f'\t\t\t\t\trestart <= \'0\';\r\n')
 				f.write(f'\t\t\t\tend if;\r\n')
-				f.write(f'\t\t\t\tif ({lcLocksLocked})then\r\n')
+
+			scLocksLocked = " and ".join([f'{i.split('_')[0]}_lock = LOCKED' for i in route['ScissorCrossings']])
+
+			if route['ScissorCrossings'] != []:
+				scLocksReleased = " and ".join([f'{i.split('_')[0]}_lock = RELEASED' for i in route['ScissorCrossings']])
+				scLocksReserved = " and ".join([f'{i.split('_')[0]}_lock = RESERVED' for i in route['ScissorCrossings']])
+				
+				scStates = " and ".join([f'{i.split('_')[0]}_state = {"NORMAL" if i[-1] == "N" else "REVERSE"}' for i in route['ScissorCrossings']])
+				
+				f.write(f'\t\t\t\tif ({scLocksReleased} and {scStates}) then\r\n')
+				for scissorCrossing in route['ScissorCrossings']:
+					f.write(f'\t\t\t\t\t{scissorCrossing.split('_')[0]}_command <= LOCK;\n')
+				f.write(f'\t\t\t\t\trestart <= \'0\';\r\n')
+				f.write(f'\t\t\t\tend if;\r\n')
+
+			infraestructure = [lcLocksLocked, scLocksLocked]
+			generalLock = " and ".join(s for s in infraestructure if s)
+			if infraestructure != ['','']:
+				f.write(f'\t\t\t\tif ({generalLock})then\r\n')
 				f.write(f'\t\t\t\t\troutingState <= DRIVING_SIGNAL;\n')
 				f.write(f'\t\t\t\tend if;\r\n')
+			else:
+				f.write(f'\t\t\t\troutingState <= DRIVING_SIGNAL;\n')
 
 			f.write(f'\t\t\twhen DRIVING_SIGNAL =>\r\n')
 
@@ -4387,8 +4425,12 @@ class ACG():
 			f.write(f'\t\t\twhen RELEASING_INFRASTRUCTURE =>\r\n')
 
 			if route['LevelCrossings'] != []:
-				for net in route['LevelCrossings']:
-					f.write(f'\t\t\t\t{net}_command <= RELEASE;\n')
+				for levelCrossing in route['LevelCrossings']:
+					f.write(f'\t\t\t\t{levelCrossing}_command <= RELEASE;\n')
+			if route['ScissorCrossings'] != []:
+				for scrissorCrossing in route['ScissorCrossings']:
+					f.write(f'\t\t\t\t{scrissorCrossing.split('_')[0]}_command <= RELEASE;\n')
+
 			f.write(f'\t\t\t\trouteState <= \'0\';\n')
 			f.write(f'\t\t\t\troutingState <= RELEASING_TRACKS;\n')
 
