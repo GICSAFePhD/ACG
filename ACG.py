@@ -443,7 +443,7 @@ class ACG():
 		f.write(f'\tpackage {packet} is\n')
 		
 		f.write(f'\t\ttype routeCommands is (RELEASE,RESERVE,LOCK);\r\n')
-		f.write(f'\t\ttype routeStates is (WAITING_COMMAND,RESERVING_TRACKS,LOCKING_TRACKS,RESERVING_INFRASTRUCTURE,LOCKING_INFRASTRUCTURE,DRIVING_SIGNAL,RELEASING_INFRASTRUCTURE,RELEASING_TRACKS);\r\n')
+		f.write(f'\t\ttype routeStates is (WAITING_COMMAND,RESERVING_TRACKS,LOCKING_TRACKS,RESERVING_INFRASTRUCTURE,LOCKING_INFRASTRUCTURE,DRIVING_SIGNAL,SEQUENTIAL_RELEASE,RELEASING_INFRASTRUCTURE,RELEASING_TRACKS);\r\n')
 
 		f.write(f'\t\ttype nodeStates is (OCCUPIED,FREE);\r\n')
 
@@ -4252,9 +4252,7 @@ class ACG():
 			f.write(f'\t\t);\r\n')
 			f.write(f'\tend component flipFlop;\r\n')
 
-			#routeStates is (WAITING_COMMAND,RESERVING_TRACKS,LOCKING_TRACKS,RESERVING_INFRASTRUCTURE,LOCKING_INFRASTRUCTURE,DRIVING_SIGNAL,RELEASING_INFRASTRUCTURE,RELEASING_TRACKS);\r\n')
-
-
+			#routeStates is (WAITING_COMMAND,RESERVING_TRACKS,LOCKING_TRACKS,RESERVING_INFRASTRUCTURE,LOCKING_INFRASTRUCTURE,DRIVING_SIGNAL,SEQUENCIAL_RELEASE,RELEASING_INFRASTRUCTURE,RELEASING_TRACKS);\r\n')
 
 			f.write(f'\tsignal restart : std_logic := \'0\';\r\n')
 			f.write(f'\tsignal Q : std_logic_vector({FF} downto 0) := (others => \'0\');\r\n')
@@ -4324,7 +4322,6 @@ class ACG():
 			f.write(f'\t\t\t\tend if;\r\n')
 			
 			lcLocksReserved = " and ".join([f'{i}_lock = RESERVED' for i in route['LevelCrossings']])
-
 			if route['LevelCrossings'] != []:
 				lcLocksReleased = " and ".join([f'{i}_lock = RELEASED' for i in route['LevelCrossings']])
 
@@ -4335,7 +4332,6 @@ class ACG():
 				f.write(f'\t\t\t\tend if;\r\n')
 
 			scLocksReserved = " and ".join([f'{i.split('_')[0]}_lock = RESERVED' for i in route['ScissorCrossings']])
-
 			if route['ScissorCrossings'] != []:
 				scLocksReleased = " and ".join([f'{i.split('_')[0]}_lock = RELEASED' for i in route['ScissorCrossings']])
 
@@ -4346,9 +4342,19 @@ class ACG():
 				f.write(f'\t\t\t\t\trestart <= \'0\';\r\n')
 				f.write(f'\t\t\t\tend if;\r\n')
 
-			infraestructure = [lcLocksReserved, scLocksReserved]
+			swLocksReserved = " and ".join([f'{"s" if i[0].isdigit() else ""}{i.split('_')[0]}_lock = RESERVED' for i in route['Switches']])
+			if route['Switches'] != []:
+				swLocksReleased = " and ".join([f'{"s" if i[0].isdigit() else ""}{i.split('_')[0]}_lock = RELEASED' for i in route['Switches']])
+
+				f.write(f'\t\t\t\tif ({swLocksReleased}) then\r\n')
+				for switches in route['Switches']:
+					f.write(f'\t\t\t\t\t{"s" if switches[0].isdigit() else ""}{switches.split('_')[0]}_command <= RESERVE;\n')
+				f.write(f'\t\t\t\t\trestart <= \'0\';\r\n')
+				f.write(f'\t\t\t\tend if;\r\n')
+
+			infraestructure = [lcLocksReserved, scLocksReserved, swLocksReserved]
 			generalReserve = " and ".join(s for s in infraestructure if s)
-			if infraestructure != ['','']:
+			if any(element != '' for element in infraestructure):
 				f.write(f'\t\t\t\tif ({generalReserve})then\r\n')
 				f.write(f'\t\t\t\t\troutingState <= LOCKING_INFRASTRUCTURE;\n')
 				f.write(f'\t\t\t\tend if;\r\n')
@@ -4364,7 +4370,6 @@ class ACG():
 			f.write(f'\t\t\t\tend if;\r\n')
 			
 			lcLocksLocked = " and ".join([f'{i}_lock = LOCKED' for i in route['LevelCrossings']])
-
 			if route['LevelCrossings'] != []:
 				lcLocksReleased = " and ".join([f'{i}_lock = RELEASED' for i in route['LevelCrossings']])
 				lcLocksReserved = " and ".join([f'{i}_lock = RESERVED' for i in route['LevelCrossings']])
@@ -4378,7 +4383,6 @@ class ACG():
 				f.write(f'\t\t\t\tend if;\r\n')
 
 			scLocksLocked = " and ".join([f'{i.split('_')[0]}_lock = LOCKED' for i in route['ScissorCrossings']])
-
 			if route['ScissorCrossings'] != []:
 				scLocksReleased = " and ".join([f'{i.split('_')[0]}_lock = RELEASED' for i in route['ScissorCrossings']])
 				scLocksReserved = " and ".join([f'{i.split('_')[0]}_lock = RESERVED' for i in route['ScissorCrossings']])
@@ -4391,9 +4395,23 @@ class ACG():
 				f.write(f'\t\t\t\t\trestart <= \'0\';\r\n')
 				f.write(f'\t\t\t\tend if;\r\n')
 
-			infraestructure = [lcLocksLocked, scLocksLocked]
+			swLocksLocked = " and ".join([f'{"s" if i[0].isdigit() else ""}{i.split('_')[0]}_lock = LOCKED' for i in route['Switches']])
+			sw_dict = {'N':'NORMAL','R':'REVERSE','NN':'DOUBLE_NORMAL','RR':'DOUBLE_REVERSE','RN':'REVERSE_NORMAL','NR':'NORMAL_REVERSE','XN':'NORMAL','XR':'REVERSE'}
+			if route['Switches'] != []:
+				swLocksReleased = " and ".join([f'{"s" if i[0].isdigit() else ""}{i.split('_')[0]}_lock = RELEASED' for i in route['Switches']])
+				swLocksReserved = " and ".join([f'{"s" if i[0].isdigit() else ""}{i.split('_')[0]}_lock = RESERVED' for i in route['Switches']])
+				
+				swStates = " and ".join([f'{"s" if i[0].isdigit() else ""}{i.split('_')[0]}_state = {sw_dict[i.split('_')[1]]}' for i in route['Switches']])
+				
+				f.write(f'\t\t\t\tif ({swLocksReleased} and {swStates}) then\r\n')
+				for switch in route['Switches']:
+					f.write(f'\t\t\t\t\t{"s" if switch[0].isdigit() else ""}{switch.split('_')[0]}_command <= LOCK;\n')
+				f.write(f'\t\t\t\t\trestart <= \'0\';\r\n')
+				f.write(f'\t\t\t\tend if;\r\n')
+
+			infraestructure = [lcLocksLocked, scLocksLocked, swLocksLocked]
 			generalLock = " and ".join(s for s in infraestructure if s)
-			if infraestructure != ['','']:
+			if any(element != '' for element in infraestructure):
 				f.write(f'\t\t\t\tif ({generalLock})then\r\n')
 				f.write(f'\t\t\t\t\troutingState <= DRIVING_SIGNAL;\n')
 				f.write(f'\t\t\t\tend if;\r\n')
@@ -4416,11 +4434,19 @@ class ACG():
 			f.write(f'\t\t\t\t\trestart <= \'0\';\r\n')
 			f.write(f'\t\t\t\t\trouteState <= \'1\';\n')
 			f.write(f'\t\t\t\t\t{route['Start']}_command <= LOCK;\n')
+			f.write(f'\t\t\t\t\troutingState <= SEQUENTIAL_RELEASE;\n')
 			f.write(f'\t\t\t\tend if;\r\n')
 
-			# ADD FINISH CONDITION
+			f.write(f'\t\t\twhen SEQUENTIAL_RELEASE =>\r\n')
 
-			# ADD MORE COMPONENTS, ONLY LEVELCROSSINGS ARE WORKING
+			f.write(f'\t\t\t\t--- Sequential release\r\n')
+
+			for net in route['Path']: # FIX SEQUENCE. It is A, AB, B, BC, D ...
+				f.write(f'\t\t\t\t\t--- {net} occupied\r\n')
+				f.write(f'\t\t\t\t\t--- {net} released\r\n')
+				if net == route['Path'][-1]:
+					f.write(f'\t\t\t\t\t--- {net} occupied\r\n')
+					f.write(f'\t\t\t\t\t--- Finish -> Release all\r\n')
 
 			f.write(f'\t\t\twhen RELEASING_INFRASTRUCTURE =>\r\n')
 
@@ -4430,6 +4456,9 @@ class ACG():
 			if route['ScissorCrossings'] != []:
 				for scrissorCrossing in route['ScissorCrossings']:
 					f.write(f'\t\t\t\t{scrissorCrossing.split('_')[0]}_command <= RELEASE;\n')
+			if route['Switches'] != []:
+				for switch in route['Switches']:
+					f.write(f'\t\t\t\t{"s" if switch[0].isdigit() else ""}{switch.split('_')[0]}_command <= RELEASE;\n')
 
 			f.write(f'\t\t\t\trouteState <= \'0\';\n')
 			f.write(f'\t\t\t\troutingState <= RELEASING_TRACKS;\n')
