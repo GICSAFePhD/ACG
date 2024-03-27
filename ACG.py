@@ -4257,7 +4257,8 @@ class ACG():
 			f.write(f'\tsignal restart : std_logic := \'0\';\r\n')
 			f.write(f'\tsignal Q : std_logic_vector({FF} downto 0) := (others => \'0\');\r\n')
 			f.write(f'\tsignal routingState : routeStates;\r\n')
-			#f.write(f'\tsignal commandAux : std_logic;\r\n')
+
+			f.write(f'\tsignal {" , ".join([f'{i}_used' for i in route['Path']])} : std_logic := \'0\';\r\n')
 
 			f.write(f'begin\r\n')
 
@@ -4441,12 +4442,21 @@ class ACG():
 
 			f.write(f'\t\t\t\t--- Sequential release\r\n')
 
-			for net in route['Path']: # FIX SEQUENCE. It is A, AB, B, BC, D ...
-				f.write(f'\t\t\t\t\t--- {net} occupied\r\n')
-				f.write(f'\t\t\t\t\t--- {net} released\r\n')
+			for net in route['Path']:
+				f.write(f'\t\t\t\t\tif ({net}_used = \'0\' and {net}_state = OCCUPIED) then \r\n')
+				f.write(f'\t\t\t\t\t\t{net}_used <= \'1\';\r\n')
+				f.write(f'\t\t\t\t\tend if;\r\n')
+
+
+				f.write(f'\t\t\t\t\tif ({net}_used = \'1\' and {net}_state = FREE) then\r\n')
+				f.write(f'\t\t\t\t\t\t{net}_used <= \'0\';\r\n')
+				f.write(f'\t\t\t\t\t\t{net}_command <= RELEASE;\n')
+				
+
 				if net == route['Path'][-1]:
-					f.write(f'\t\t\t\t\t--- {net} occupied\r\n')
-					f.write(f'\t\t\t\t\t--- Finish -> Release all\r\n')
+					f.write(f'\t\t\t\t\t\t--- Finish -> Release all\r\n')
+					f.write(f'\t\t\t\t\troutingState <= RELEASING_INFRASTRUCTURE;\n')
+				f.write(f'\t\t\t\t\tend if;\r\n')
 
 			f.write(f'\t\t\twhen RELEASING_INFRASTRUCTURE =>\r\n')
 
