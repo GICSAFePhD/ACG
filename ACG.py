@@ -340,6 +340,7 @@ class ACG():
 		doubleSwitches = []
 		scissorCrossings = []
 		platforms = []
+		levelCrossings = []
 
 		n_netElements = len(network)
 		n_switches = 0
@@ -360,6 +361,7 @@ class ACG():
 		n_signals_X = 0
 		n_signals_P = 0
 		n_signals_J = 0
+		n_signals_H = 0
 
 		for element in network:
 			if "Switch" in network[element]:
@@ -379,8 +381,10 @@ class ACG():
 				n_buffers = n_buffers + 1
 
 			if 'LevelCrossing' in network[element]:
-				n_levelCrossings = n_levelCrossings + 1
-
+				for levelCrossing in network[element]['LevelCrossing']:
+					if levelCrossing not in levelCrossings:
+						levelCrossings.append(levelCrossing)
+	
 			if 'Platform' in network[element]:
 				for platform in network[element]['Platform']:
 					if platform not in platforms:
@@ -409,15 +413,18 @@ class ACG():
 						n_signals_P = n_signals_P + 1
 					if 'J' in signal:
 						n_signals_J = n_signals_J + 1
+					if 'H' in signal:
+						n_signals_H = n_signals_H + 1
 
 		n_switches = len(singleSwitches)
 		n_doubleSwitch = len(doubleSwitches)
 		n_scissorCrossings = len(scissorCrossings)
 		n_platforms = len(platforms)
-
+		n_levelCrossings = len(levelCrossings)
+			
 		n_signals_1 = 0
 		n_signals_2 = n_signals_T + n_signals_B + n_signals_P
-		n_signals_3 = n_signals_S + n_signals_C + n_signals_L + n_signals_X + n_signals_J
+		n_signals_3 = n_signals_S + n_signals_C + n_signals_L + n_signals_X + n_signals_J + n_signals_H
 
 		N = n_netElements + n_switches + 2*n_doubleSwitch + n_scissorCrossings + n_levelCrossings + 2*n_signals_2 + 2*n_signals_3
 		M = N - n_netElements
@@ -1707,7 +1714,7 @@ class ACG():
 		f.write(f'\t\tgeneric(\n')
 		f.write(f'\t\t\tN : natural := {str(N)};\n')
 		f.write(f'\t\t\tN_SIGNALS : natural := {str(n_signals)};\n')
-		if n_levelCrossings > 0:
+		if n_routes > 0:
 			f.write(f'\t\t\tN_ROUTES : natural := {str(n_routes)};\n')
 		if n_levelCrossings > 0:
 			f.write(f'\t\t\tN_LEVELCROSSINGS : natural := {str(n_levelCrossings)};\n')
@@ -1738,8 +1745,10 @@ class ACG():
 			f.write(f'\t\t\tsingleSwitches :  out std_logic_vector(N_SINGLESWITCHES-1 downto 0);\n')    
 		if n_switches == 1:
 			f.write(f'\t\t\tsingleSwitches :  out std_logic;\n')
-		if n_doubleSwitch > 0:
+		if n_doubleSwitch > 1:
 			f.write(f'\t\t\tdoubleSwitches :  out dSwitches_type;\n')    
+		if n_doubleSwitch == 1:
+			f.write(f'\t\t\tdoubleSwitches :  out dSwitch_type;\n')    
 		if n_scissorCrossings > 1:
 			f.write(f'\t\t\tscissorCrossings :  out std_logic_vector(N_SCISSORCROSSINGS-1 downto 0);\n')    
 		if n_scissorCrossings == 1:
@@ -1793,10 +1802,13 @@ class ACG():
 			f.write(f'\t\t\tsingleSwitches_i : in std_logic;\n')  
 			f.write(f'\t\t\tsingleSwitches_o : out std_logic;\n')
 
-		if n_doubleSwitch > 0:
+		if n_doubleSwitch > 1:
 			f.write(f'\t\t\tdoubleSwitches_i : in dSwitches_type;\n')  
 			f.write(f'\t\t\tdoubleSwitches_o : out dSwitches_type;\n')
-
+		if n_doubleSwitch == 1:
+			f.write(f'\t\t\tdoubleSwitches_i : in dSwitch_type;\n')  
+			f.write(f'\t\t\tdoubleSwitches_o : out dSwitch_type;\n')
+				
 		if n_scissorCrossings > 1:
 			f.write(f'\t\t\tscissorCrossings_i : in std_logic_vector(N_SCISSORCROSSINGS-1 downto 0);\n')  
 			f.write(f'\t\t\tscissorCrossings_o : out std_logic_vector(N_SCISSORCROSSINGS-1 downto 0);\n')
@@ -1815,7 +1827,7 @@ class ACG():
 		f.write(f'\t\t\tN : natural := {str(N)};\n')
 		
 		f.write(f'\t\t\tN_SIGNALS : natural := {str(n_signals)};\n')
-		if n_levelCrossings > 0:
+		if n_routes > 0:
 			f.write(f'\t\t\tN_ROUTES : natural := {str(n_routes)};\n')
 		if n_levelCrossings > 0:
 			f.write(f'\t\t\tN_LEVELCROSSINGS : natural := {str(n_levelCrossings)};\n')
@@ -1849,9 +1861,11 @@ class ACG():
 			f.write(f'\t\t\tscissorCrossings : in std_logic_vector(N_SCISSORCROSSINGS-1 downto 0);\n')
 		if n_scissorCrossings == 1:
 			f.write(f'\t\t\tscissorCrossings : in std_logic;\n')
-
-		if n_doubleSwitch > 0:
+		if n_doubleSwitch > 1:
 			f.write(f'\t\t\tdoubleSwitches : in dSwitches_type;\n')
+		if n_doubleSwitch == 1:
+			f.write(f'\t\t\tdoubleSwitches : in dSwitch_type;\n')
+
 		f.write(f'\t\t\toutput : out std_logic_vector({str(M)}-1 downto 0);\n')
 		f.write(f'\t\t\treset : in std_logic\n')
 		f.write(f'\t\t);\n')
@@ -1875,8 +1889,10 @@ class ACG():
 			f.write(f'\tSignal sc_s_i,sc_s_o : std_logic_vector({str(n_scissorCrossings)}-1 downto 0);\n')
 		if n_scissorCrossings == 1:
 			f.write(f'\tSignal sc_s_i,sc_s_o : std_logic;\n')
-		if n_doubleSwitch > 0:
+		if n_doubleSwitch > 1:
 			f.write(f'\tSignal dsw_s_i,dsw_s_o : dSwitches_type;\n')
+		if n_doubleSwitch == 1:
+			f.write(f'\tSignal dsw_s_i,dsw_s_o : dSwitch_type;\n')
 		f.write(f'\tSignal process_spt_int, process_int_med : std_logic;\n')
 		
 		f.write(f'\nbegin\r\n')  
@@ -2026,8 +2042,10 @@ class ACG():
 			f.write(f'\t\t\tscissorCrossings : out std_logic_vector(N_SCRISSORCROSSINGS-1 downto 0);\n')  
 		if n_scissorCrossings == 1:
 			f.write(f'\t\t\tscissorCrossings : out std_logic;\n')
-		if n_doubleSwitch > 0:
+		if n_doubleSwitch > 1:
 			f.write(f'\t\t\tdoubleSwitches : out dSwitches_type;\n') 
+		if n_doubleSwitch == 1:
+			f.write(f'\t\t\tdoubleSwitches : out dSwitch_type;\n')
 		f.write(f'\t\t\treset : in std_logic\n')
 		f.write(f'\t\t);\n')
 		f.write(f'\tend entity {splitter};\r\n')
@@ -2052,8 +2070,10 @@ class ACG():
 			f.write(f'\tSignal sc_s_i,sc_s_o : std_logic_vector({str(n_scissorCrossings)}-1 downto 0);\n')
 		if n_scissorCrossings == 1:
 			f.write(f'\tSignal sc_s_i,sc_s_o : std_logic;\n')
-		if n_doubleSwitch > 0:
+		if n_doubleSwitch > 1:
 			f.write(f'\tSignal dsw_s_i,dsw_s_o : dSwitches_type;\n')
+		if n_doubleSwitch == 1:
+			f.write(f'\tSignal dsw_s_i,dsw_s_o : dSwitch_type;\n')
 		f.write(f'begin\r\n')  
 		
 		# Ocupation | Routes | signals | levelCrossings | singleSwitches | doubleSwitches | scissorCrossinges
@@ -2081,9 +2101,12 @@ class ACG():
 			f.write(f'\t\t\t\tscissorCrossings <= "{str('0'*n_scissorCrossings)}";\n')
 		if n_scissorCrossings == 1:
 			f.write(f'\t\t\t\tscissorCrossings <= \'0\';\n')
-		if n_doubleSwitch > 0:
+		if n_doubleSwitch > 1:
 			f.write(f'\t\t\t\tdoubleSwitches.lsb <= "{str('0'*n_doubleSwitch)}";\n')
 			f.write(f'\t\t\t\tdoubleSwitches.msb <= "{str('0'*n_doubleSwitch)}";\n')
+		if n_doubleSwitch == 1:
+			f.write(f'\t\t\t\tdoubleSwitches.lsb <= \'0\';\n')
+			f.write(f'\t\t\t\tdoubleSwitches.msb <= \'0\';\n')
 		f.write(f'\t\t\t\tprocessed <= \'0\';\n')    
 		f.write(f'\t\t\telse\n')
 		f.write(f'\t\t\t\tprocessed <= processing;\n') 
@@ -2115,7 +2138,8 @@ class ACG():
 		if n_switches == 1:
 			f.write(f'\t\t\t\t\tsingleSwitches <= packet({str(N-1-n_routes-n_netElements-2*n_signals-n_levelCrossings-1)});\n')
 		
-		if n_doubleSwitch > 0:
+
+		if n_doubleSwitch > 1:
 			for i in range(2*n_doubleSwitch):
 				if i%2:
 					#print ('LSB: {}'.format(i+1))
@@ -2123,6 +2147,9 @@ class ACG():
 				else:
 					#print ('MSB: {}'.format(i+1))
 					f.write(f'\t\t\t\t\tdoubleSwitches.msb({str(int(i/2))}) <= packet({str(N-1-n_routes-n_netElements-2*n_signals-n_levelCrossings-n_switches-i)});\n')
+		if n_doubleSwitch == 1:
+			f.write(f'\t\t\t\t\tdoubleSwitches.lsb <= packet({str(N-1-n_routes-n_netElements-2*n_signals-n_levelCrossings-n_switches)});\n')
+			f.write(f'\t\t\t\t\tdoubleSwitches.msb <= packet({str(N-1-n_routes-n_netElements-2*n_signals-n_levelCrossings-n_switches-1)});\n')
 
 		if n_scissorCrossings > 1:
 			for i in range(n_scissorCrossings):
@@ -2189,9 +2216,11 @@ class ACG():
 			f.write(f'\t\t\tscissorCrossings : in std_logic_vector(N_SCISSORCROSSINGS-1 downto 0);\n')
 		if n_scissorCrossings == 1:
 			f.write(f'\t\t\tscissorCrossings : in std_logic;\n')
-		if n_doubleSwitch > 0:
+		if n_doubleSwitch > 1:
 			f.write(f'\t\t\tdoubleSwitches : in dSwitches_type;\n')
-		
+		if n_doubleSwitch == 1:
+			f.write(f'\t\t\tdoubleSwitches : in dSwitch_type;\n')
+
 		f.write(f'\t\t\toutput : out std_logic_vector({str(M)}-1 downto 0);\n')
 		f.write(f'\t\t\treset : in std_logic\n')
 		f.write(f'\t\t);\n')
@@ -2235,14 +2264,18 @@ class ACG():
 		if n_switches == 1:
 			f.write(f'\t\t\t\t\toutput({str(n_routes+2*n_signals+n_levelCrossings)}) <= singleSwitches;\n')
 
-		for i in range(2*n_doubleSwitch):
-			if i%2:
-				#print ('MSB: {}'.format(i+1))
-				f.write(f'\t\t\t\t\toutput({str(n_routes+2*n_signals+n_levelCrossings+n_switches+i)}) <= doubleSwitches.lsb({str(int((i+1)/2-1))});\n')
-			else:
-				#print ('LSB: {}'.format(i+1))
-				f.write(f'\t\t\t\t\toutput({str(n_routes+2*n_signals+n_levelCrossings+n_switches+i)}) <= doubleSwitches.msb({str(int((i+1)/2))});\n')
-		
+		if n_doubleSwitch > 1:
+			for i in range(2*n_doubleSwitch):
+				if i%2:
+					#print ('MSB: {}'.format(i+1))
+					f.write(f'\t\t\t\t\toutput({str(n_routes+2*n_signals+n_levelCrossings+n_switches+i)}) <= doubleSwitches.lsb({str(int((i+1)/2-1))});\n')
+				else:
+					#print ('LSB: {}'.format(i+1))
+					f.write(f'\t\t\t\t\toutput({str(n_routes+2*n_signals+n_levelCrossings+n_switches+i)}) <= doubleSwitches.msb({str(int((i+1)/2))});\n')
+		if n_doubleSwitch == 1:
+			f.write(f'\t\t\t\t\toutput({str(n_routes+2*n_signals+n_levelCrossings+n_switches)}) <= doubleSwitches.lsb;\n')
+			f.write(f'\t\t\t\t\toutput({str(n_routes+2*n_signals+n_levelCrossings+n_switches+1)}) <= doubleSwitches.msb;\n')
+
 		if n_scissorCrossings > 1:
 			f.write(f'\t\t\t\t\toutput({str(n_routes+2*n_signals+n_levelCrossings+n_switches+2*n_doubleSwitch+n_scissorCrossings-1)} downto {str(n_routes+2*n_signals+n_levelCrossings+n_switches+2*n_doubleSwitch)}) <= scissorCrossings;\n')
 		if n_scissorCrossings == 1:
@@ -2313,10 +2346,13 @@ class ACG():
 		if n_scissorCrossings > 0:
 			f.write(f'\t\t\tscissorCrossings_i : in std_logic{"_vector(N_SCISSORCROSSINGS-1 downto 0)" if n_scissorCrossings > 1 else ""};\n')
 			f.write(f'\t\t\tscissorCrossings_o : out std_logic{"_vector(N_SCISSORCROSSINGS-1 downto 0)" if n_scissorCrossings > 1 else ""};\n')
-		if n_doubleSwitch > 0:
+		if n_doubleSwitch > 1:
 			f.write(f'\t\t\tdoubleSwitches_i : in dSwitches_type;\n')  
 			f.write(f'\t\t\tdoubleSwitches_o : out dSwitches_type;\n')
-			
+		if n_doubleSwitch == 1:
+			f.write(f'\t\t\tdoubleSwitches_i : in dSwitch_type;\n')  
+			f.write(f'\t\t\tdoubleSwitches_o : out dSwitch_type;\n')
+				
 		f.write(f'\t\t\treset : in std_logic\n')
 		f.write(f'\t\t);\n')
 		f.write(f'\tend entity {network};\r\n')
@@ -2881,107 +2917,107 @@ class ACG():
 	
 			f.write(f'architecture Behavioral of {node} is\r\n')
 
-			f.write(f'\tcomponent flipFlop is\r\n')
-			f.write(f'\t\tport(\r\n')
-			f.write(f'\t\t\tclock : in std_logic;\r\n')
-			f.write(f'\t\t\treset : in std_logic;\r\n')
-			f.write(f'\t\t\tQ : out std_logic\r\n')
-			f.write(f'\t\t);\r\n')
+			f.write(f'\tcomponent flipFlop is\n')
+			f.write(f'\t\tport(\n')
+			f.write(f'\t\t\tclock : in std_logic;\n')
+			f.write(f'\t\t\treset : in std_logic;\n')
+			f.write(f'\t\t\tQ : out std_logic\n')
+			f.write(f'\t\t);\n')
 			f.write(f'\tend component flipFlop;\r\n')
 
-			f.write(f'\tsignal restart : std_logic := \'0\';\r\n')
-			f.write(f'\tsignal Q : std_logic_vector({FF} downto 0) := (others => \'0\');\r\n')
-			f.write(f'\tsignal commandState : routeCommands;\r\n')
+			f.write(f'\tsignal restart : std_logic := \'0\';\n')
+			f.write(f'\tsignal Q : std_logic_vector({FF} downto 0) := (others => \'0\');\n')
+			f.write(f'\tsignal commandState : routeCommands;\n')
 			f.write(f'\tsignal commandAux : std_logic;\r\n')
 
 			f.write(f'begin\r\n')
 
-			f.write(f'\tgen : for i in 0 to {FF-1} generate\r\n')
-			f.write(f'\t\tinst: flipFlop port map(Q(i),restart,Q(i+1));\r\n')
+			f.write(f'\tgen : for i in 0 to {FF-1} generate\n')
+			f.write(f'\t\tinst: flipFlop port map(Q(i),restart,Q(i+1));\n')
 			f.write(f'\tend generate;\r\n')
 
-			f.write(f'\tQ(0) <= clock;\r\n')
+			f.write(f'\tQ(0) <= clock;\n')
 
-			f.write(f'\n\tprocess(clock)\r\n')
-			f.write(f'\tbegin\r\n')
-			f.write(f'\t\tif (clock = \'1\' and clock\'Event) then\r\n')
-			f.write(f'\t\t\tif (reset = \'1\') then\r\n')
-			f.write(f'\t\t\t\tcommandState <= RELEASE;\r\n')
-			f.write(f'\t\t\telse\r\n')
+			f.write(f'\n\tprocess(clock)\n')
+			f.write(f'\tbegin\n')
+			f.write(f'\t\tif (clock = \'1\' and clock\'Event) then\n')
+			f.write(f'\t\t\tif (reset = \'1\') then\n')
+			f.write(f'\t\t\t\tcommandState <= RELEASE;\n')
+			f.write(f'\t\t\telse\n')
 
-			f.write(f'\t\t\t\tif ({freeState}) then\r\n')
-			f.write(f'\t\t\t\t\tcommandState <= RELEASE;\r\n')
-			f.write(f'\t\t\t\telse\r\n')
-			f.write(f'\t\t\t\t\tif ({reserveState}) then\r\n')
-			f.write(f'\t\t\t\t\t\tcommandState <= RESERVE;\r\n')
-			f.write(f'\t\t\t\t\tend if;\r\n')
-			f.write(f'\t\t\t\t\tif ({lockState}) then\r\n')
-			f.write(f'\t\t\t\t\r\tcommandState <= LOCK;\r\n')
-			f.write(f'\t\t\t\t\tend if;\r\n')
-			f.write(f'\t\t\t\tend if;\r\n')
+			f.write(f'\t\t\t\tif ({freeState}) then\n')
+			f.write(f'\t\t\t\t\tcommandState <= RELEASE;\n')
+			f.write(f'\t\t\t\telse\n')
+			f.write(f'\t\t\t\t\tif ({reserveState}) then\n')
+			f.write(f'\t\t\t\t\t\tcommandState <= RESERVE;\n')
+			f.write(f'\t\t\t\t\tend if;\n')
+			f.write(f'\t\t\t\t\tif ({lockState}) then\n')
+			f.write(f'\t\t\t\t\t\tcommandState <= LOCK;\n')
+			f.write(f'\t\t\t\t\tend if;\n')
+			f.write(f'\t\t\t\tend if;\n')
 
-			f.write(f'\t\t\tend if;\r\n')
+			f.write(f'\t\t\tend if;\n')
 
-			f.write(f'\t\tend if;\r\n')
-			f.write(f'\tend process;\r\n') 
+			f.write(f'\t\tend if;\n')
+			f.write(f'\tend process;\n') 
 
-			f.write(f'\n\tprocess(commandState)\r\n')
-			f.write(f'\tbegin\r\n')
-			f.write(f'\t\tcase commandState is\r\n')
-			f.write(f'\t\t\twhen RELEASE => -- AUTOMATIC\r\n')
+			f.write(f'\n\tprocess(commandState)\n')
+			f.write(f'\tbegin\n')
+			f.write(f'\t\tcase commandState is\n')
+			f.write(f'\t\t\twhen RELEASE => -- AUTOMATIC\n')
 			f.write(f'\t\t\t\tlock_{name} <= RELEASED;\n')
-			f.write(f'\t\t\twhen RESERVE => -- DONT CHANGE\r\n')
+			f.write(f'\t\t\twhen RESERVE => -- DONT CHANGE\n')
 			f.write(f'\t\t\t\tlock_{name} <= RESERVED;\n')
-			f.write(f'\t\t\twhen LOCK => -- DONT CHANGE\r\n')
+			f.write(f'\t\t\twhen LOCK => -- DONT CHANGE\n')
 			f.write(f'\t\t\t\tlock_{name} <= LOCKED;\n')
-			f.write(f'\t\t\twhen others =>\r\n')
+			f.write(f'\t\t\twhen others =>\n')
 			f.write(f'\t\t\t\tlock_{name} <= LOCKED;\n')
-			f.write(f'\t\tend case;\r\n')
-			f.write(f'\tend process;\r\n') 
+			f.write(f'\t\tend case;\n')
+			f.write(f'\tend process;\n') 
 
-			f.write(f'\n\tprocess(commandState)\r\n')
-			f.write(f'\tbegin\r\n')
-			f.write(f'\t\tcase commandState is\r\n')
-			f.write(f'\t\t\twhen RELEASE => -- AUTOMATIC\r\n')
-			f.write(f'\t\t\t\tcommandAux <= {ocupation};\r\n')
-			f.write(f'\t\t\twhen RESERVE => -- DONT CHANGE\r\n')
-			f.write(f'\t\t\t\tcommandAux <= \'0\';\r\n')
-			f.write(f'\t\t\twhen LOCK => -- DONT CHANGE\r\n')
-			f.write(f'\t\t\t\tcommandAux <= \'0\';\r\n')
-			f.write(f'\t\t\twhen others =>\r\n')
-			f.write(f'\t\t\t\tcommandAux <= \'0\';\r\n')
-			f.write(f'\t\tend case;\r\n')
-			f.write(f'\tend process;\r\n') 
+			f.write(f'\n\tprocess(commandState)\n')
+			f.write(f'\tbegin\n')
+			f.write(f'\t\tcase commandState is\n')
+			f.write(f'\t\t\twhen RELEASE => -- AUTOMATIC\n')
+			f.write(f'\t\t\t\tcommandAux <= {ocupation};\n')
+			f.write(f'\t\t\twhen RESERVE => -- DONT CHANGE\n')
+			f.write(f'\t\t\t\tcommandAux <= \'0\';\n')
+			f.write(f'\t\t\twhen LOCK => -- DONT CHANGE\n')
+			f.write(f'\t\t\t\tcommandAux <= \'0\';\n')
+			f.write(f'\t\t\twhen others =>\n')
+			f.write(f'\t\t\t\tcommandAux <= \'0\';\n')
+			f.write(f'\t\tend case;\n')
+			f.write(f'\tend process;\n') 
 
-			f.write(f'\n\tprocess(clock)\r\n')
-			f.write(f'\tbegin\r\n')
-			f.write(f'\t\tif (clock = \'1\' and clock\'Event) then\r\n')
+			f.write(f'\n\tprocess(clock)\n')
+			f.write(f'\tbegin\n')
+			f.write(f'\t\tif (clock = \'1\' and clock\'Event) then\n')
 
-			f.write(f'\t\t\tif (reset = \'1\' or ({timeout_stop})) then\r\n')
-			f.write(f'\t\t\t\trestart <= \'1\';\r\n')
-			f.write(f'\t\t\t\tif(indication = \'0\') then\r\n')
-			f.write(f'\t\t\t\t\tcorrespondence_{name} <= DOWN;\r\n')
-			f.write(f'\t\t\t\telse\r\n')
-			f.write(f'\t\t\t\t\tcorrespondence_{name} <= UP;\r\n')
-			f.write(f'\t\t\t\tend if;\r\n')
-			f.write(f'\t\t\telse\r\n')
+			f.write(f'\t\t\tif (reset = \'1\' or ({timeout_stop})) then\n')
+			f.write(f'\t\t\t\trestart <= \'1\';\n')
+			f.write(f'\t\t\t\tif(indication = \'0\') then\n')
+			f.write(f'\t\t\t\t\tcorrespondence_{name} <= DOWN;\n')
+			f.write(f'\t\t\t\telse\n')
+			f.write(f'\t\t\t\t\tcorrespondence_{name} <= UP;\n')
+			f.write(f'\t\t\t\tend if;\n')
+			f.write(f'\t\t\telse\n')
 			
-			f.write(f'\t\t\t\tif (commandAux = \'0\' and indication = \'0\') then\r\n')
-			f.write(f'\t\t\t\t\tcorrespondence_{name} <= DOWN;\r\n')
-			f.write(f'\t\t\t\t\trestart <= \'1\';\r\n')
-			f.write(f'\t\t\t\tend if;\r\n')
+			f.write(f'\t\t\t\tif (commandAux = \'0\' and indication = \'0\') then\n')
+			f.write(f'\t\t\t\t\tcorrespondence_{name} <= DOWN;\n')
+			f.write(f'\t\t\t\t\trestart <= \'1\';\n')
+			f.write(f'\t\t\t\tend if;\n')
 			
-			f.write(f'\t\t\t\tif (commandAux = \'1\' and indication = \'1\') then\r\n')
-			f.write(f'\t\t\t\t\tcorrespondence_{name} <= UP;\r\n')
-			f.write(f'\t\t\t\t\trestart <= \'1\';\r\n')
-			f.write(f'\t\t\t\tend if;\r\n')
+			f.write(f'\t\t\t\tif (commandAux = \'1\' and indication = \'1\') then\n')
+			f.write(f'\t\t\t\t\tcorrespondence_{name} <= UP;\n')
+			f.write(f'\t\t\t\t\trestart <= \'1\';\n')
+			f.write(f'\t\t\t\tend if;\n')
 
-			f.write(f'\t\t\t\tif (commandAux /= indication) then\r\n')
-			f.write(f'\t\t\t\t\tcorrespondence_{name} <= TRANSITION;\r\n')
-			f.write(f'\t\t\t\t\trestart <= \'0\';\r\n')
-			f.write(f'\t\t\t\tend if;\r\n')
-			f.write(f'\t\t\tend if;\r\n')
-			f.write(f'\t\tend if;\r\n')
+			f.write(f'\t\t\t\tif (commandAux /= indication) then\n')
+			f.write(f'\t\t\t\t\tcorrespondence_{name} <= TRANSITION;\n')
+			f.write(f'\t\t\t\t\trestart <= \'0\';\n')
+			f.write(f'\t\t\t\tend if;\n')
+			f.write(f'\t\t\tend if;\n')
+			f.write(f'\t\tend if;\n')
 			f.write(f'\tend process;\r\n') 
 
 			f.write(f'\tcommand <= commandAux;\r\n')
@@ -3678,73 +3714,73 @@ class ACG():
 					sequence[i] = 1
 			timeout_stop = " and ".join([f'Q({i}) = \'{sequence[i]}\'' for i in range(FF)])
 
-			f.write(f'architecture Behavioral of {node} is\r\n')
+			f.write(f'architecture Behavioral of {node} is\n')
 
-			f.write(f'\tcomponent flipFlop is\r\n')
-			f.write(f'\t\tport(\r\n')
-			f.write(f'\t\t\tclock : in std_logic;\r\n')
-			f.write(f'\t\t\treset : in std_logic;\r\n')
-			f.write(f'\t\t\tQ : out std_logic\r\n')
-			f.write(f'\t\t);\r\n')
-			f.write(f'\tend component flipFlop;\r\n')
+			f.write(f'\tcomponent flipFlop is\n')
+			f.write(f'\t\tport(\n')
+			f.write(f'\t\t\tclock : in std_logic;\n')
+			f.write(f'\t\t\treset : in std_logic;\n')
+			f.write(f'\t\t\tQ : out std_logic\n')
+			f.write(f'\t\t);\n')
+			f.write(f'\tend component flipFlop;\n')
 
-			f.write(f'\tsignal restart : std_logic := \'0\';\r\n')
-			f.write(f'\tsignal Q : std_logic_vector({FF} downto 0) := (others => \'0\');\r\n')
-			f.write(f'\tsignal commandState : routeCommands;\r\n')
-			f.write(f'\tsignal aspectState : signalStates;\r\n')
-			f.write(f'\tsignal commandAux : signal_type;\r\n')
-			f.write(f'\tsignal path : integer := 0;\r\n')
+			f.write(f'\tsignal restart : std_logic := \'0\';\n')
+			f.write(f'\tsignal Q : std_logic_vector({FF} downto 0) := (others => \'0\');\n')
+			f.write(f'\tsignal commandState : routeCommands;\n')
+			f.write(f'\tsignal aspectState : signalStates;\n')
+			f.write(f'\tsignal commandAux : signal_type;\n')
+			f.write(f'\tsignal path : integer := 0;\n')
 
-			f.write(f'begin\r\n')
+			f.write(f'begin\n')
 			
-			f.write(f'\tgen : for i in 0 to {FF-1} generate\r\n')
-			f.write(f'\t\tinst: flipFlop port map(Q(i),restart,Q(i+1));\r\n')
-			f.write(f'\tend generate;\r\n')
+			f.write(f'\tgen : for i in 0 to {FF-1} generate\n')
+			f.write(f'\t\tinst: flipFlop port map(Q(i),restart,Q(i+1));\n')
+			f.write(f'\tend generate;\n')
 
-			f.write(f'\tQ(0) <= clock;\r\n')
+			f.write(f'\tQ(0) <= clock;\n')
 
 			if commands != []:
-				f.write(f'\n\tprocess(clock)\r\n')
-				f.write(f'\tbegin\r\n')
-				f.write(f'\t\tif (clock = \'1\' and clock\'Event) then\r\n')
-				f.write(f'\t\t\tif (reset = \'1\') then\r\n')
-				f.write(f'\t\t\t\tcommandState <= RELEASE;\r\n')
-				f.write(f'\t\t\telse\r\n')
-				f.write(f'\t\t\t\tif ({freeState}) then\r\n')
-				f.write(f'\t\t\t\t\tcommandState <= RELEASE;\r\n')
-				f.write(f'\t\t\t\telse\r\n')
-				f.write(f'\t\t\t\t\tif ({reserveState}) then\r\n')
-				f.write(f'\t\t\t\t\t\tcommandState <= RESERVE;\r\n')
-				f.write(f'\t\t\t\t\tend if;\r\n')
-				f.write(f'\t\t\t\t\tif ({lockState}) then\r\n')
-				f.write(f'\t\t\t\t\t\tcommandState <= LOCK;\r\n')
-				f.write(f'\t\t\t\t\tend if;\r\n')
-				f.write(f'\t\t\t\tend if;\r\n')
-				f.write(f'\t\t\tend if;\r\n')
-				f.write(f'\t\tend if;\r\n')
-				f.write(f'\tend process;\r\n') 
+				f.write(f'\n\tprocess(clock)\n')
+				f.write(f'\tbegin\n')
+				f.write(f'\t\tif (clock = \'1\' and clock\'Event) then\n')
+				f.write(f'\t\t\tif (reset = \'1\') then\n')
+				f.write(f'\t\t\t\tcommandState <= RELEASE;\n')
+				f.write(f'\t\t\telse\n')
+				f.write(f'\t\t\t\tif ({freeState}) then\n')
+				f.write(f'\t\t\t\t\tcommandState <= RELEASE;\n')
+				f.write(f'\t\t\t\telse\n')
+				f.write(f'\t\t\t\t\tif ({reserveState}) then\n')
+				f.write(f'\t\t\t\t\t\tcommandState <= RESERVE;\n')
+				f.write(f'\t\t\t\t\tend if;\n')
+				f.write(f'\t\t\t\t\tif ({lockState}) then\n')
+				f.write(f'\t\t\t\t\t\tcommandState <= LOCK;\n')
+				f.write(f'\t\t\t\t\tend if;\n')
+				f.write(f'\t\t\t\tend if;\n')
+				f.write(f'\t\t\tend if;\n')
+				f.write(f'\t\tend if;\n')
+				f.write(f'\tend process;\n') 
 
-				f.write(f'\n\tprocess(commandState)\r\n')
+				f.write(f'\n\tprocess(commandState)\n')
 				f.write(f'\tbegin\r\n')
-				f.write(f'\t\tcase commandState is\r\n')
-				f.write(f'\t\t\twhen RELEASE => -- AUTOMATIC\r\n')
+				f.write(f'\t\tcase commandState is\n')
+				f.write(f'\t\t\twhen RELEASE => -- AUTOMATIC\n')
 				f.write(f'\t\t\t\tlock_{name} <= RELEASED;\n')
-				f.write(f'\t\t\twhen RESERVE => -- DONT CHANGE\r\n')
+				f.write(f'\t\t\twhen RESERVE => -- DONT CHANGE\n')
 				f.write(f'\t\t\t\tlock_{name} <= RESERVED;\n')
-				f.write(f'\t\t\twhen LOCK => -- DONT CHANGE\r\n')
+				f.write(f'\t\t\twhen LOCK => -- DONT CHANGE\n')
 				f.write(f'\t\t\t\tlock_{name} <= LOCKED;\n')
-				f.write(f'\t\t\twhen others =>\r\n')
+				f.write(f'\t\t\twhen others =>\n')
 				f.write(f'\t\t\t\tlock_{name} <= LOCKED;\n')
-				f.write(f'\t\tend case;\r\n')
-				f.write(f'\tend process;\r\n') 
+				f.write(f'\t\tend case;\n')
+				f.write(f'\tend process;\n') 
 			else:
 				f.write(f'\tlock_{name} <= LOCKED;\n')
 
 			if paths != {}:
-				f.write(f'\n\tprocess(commandState)\r\n')
-				f.write(f'\tbegin\r\n')
-				f.write(f'\t\tcase commandState is\r\n')
-				f.write(f'\t\t\twhen RELEASE | LOCK =>\r\n')
+				f.write(f'\n\tprocess(commandState)\n')
+				f.write(f'\tbegin\n')
+				f.write(f'\t\tcase commandState is\n')
+				f.write(f'\r\t\t\twhen RELEASE | LOCK =>\n')
 
 				sw_conditions = []
 				lc_conditions = []
@@ -3765,7 +3801,7 @@ class ACG():
 				#f.write(f'{main_conditions}\r\n')
 
 				if main_conditions != [None]:
-					f.write(f'\t\t\t\tif ({" or ".join([f"({main_condition})" for main_condition in main_conditions])}) then\r\n')
+					f.write(f'\t\t\t\tif ({" or ".join([f"({main_condition})" for main_condition in main_conditions])}) then\n')
 
 					for condition in range(len(main_conditions)):	
 						conditions = main_conditions[condition]
@@ -3773,130 +3809,129 @@ class ACG():
 						#	lc_condition = " and ".join(f'{x}_state = DOWN' for x in paths[sw_condition+1]['LevelCrossings'] if x != [])
 						#	conditions = conditions + f' and ({lc_condition})'	
 							
-						f.write(f'\t\t\t\t\tif ({conditions}) then\r\n')
+						f.write(f'\t\t\t\t\tif ({conditions}) then\n')
 						f.write(f'\t\t\t\t\t\tpath <= {condition+1};\n')
-						f.write(f'\t\t\t\t\tend if;\r\n')		
+						f.write(f'\t\t\t\t\tend if;\n')		
 				else:
 					f.write(f'\t\t\t\tpath <= 1;\n')
 
 				if main_conditions != [None]:
-					f.write(f'\t\t\t\telse\r\n')
+					f.write(f'\t\t\t\telse\n')
 					f.write(f'\t\t\t\t\tpath <= 0;\n')
-					f.write(f'\t\t\t\tend if;\r\n')
+					f.write(f'\t\t\t\tend if;\n')
 
-				f.write(f'\t\t\twhen RESERVE =>\r\n')
+				f.write(f'\r\t\t\twhen RESERVE =>\n')
 				f.write(f'\t\t\t\tpath <= 0;\n')				
-				f.write(f'\t\t\twhen others =>\r\n')
+				f.write(f'\r\t\t\twhen others =>\n')
 				f.write(f'\t\t\t\tpath <= 0;\n')
-				f.write(f'\t\tend case;\r\n')
-				f.write(f'\tend process;\r\n') 
+				f.write(f'\t\tend case;\n')
+				f.write(f'\tend process;\n') 
 			else:
 				if name[0] == 'T':
-					f.write(f'\taspectState <= RED;\r\n')
+					f.write(f'\taspectState <= RED;\n')
 				if name[0] == 'L':
-					f.write(f'\taspectState <= DOUBLE_YELLOW;\r\n')
+					f.write(f'\taspectState <= DOUBLE_YELLOW;\n')
 			
 			if paths != {}:
-				f.write(f'\n\tprocess(clock)\r\n')
-				f.write(f'\tbegin\r\n')
+				f.write(f'\n\tprocess(clock)\n')
+				f.write(f'\tbegin\n')
 
-				f.write(f'\t\tcase path is\r\n')
-				f.write(f'\t\t\twhen 0 =>\r\n')
+				f.write(f'\t\tcase path is\n')
+				f.write(f'\t\t\twhen 0 =>\n')
 				f.write(f'\t\t\t\taspectState <= RED;\r\n')
 				for i in range(len(paths)):
-					f.write(f'\t\t\twhen {i+1} =>\r\n')
+					f.write(f'\t\t\twhen {i+1} =>\n')
 					signal_dict = {'RED':'DOUBLE_YELLOW','DOUBLE_YELLOW':'YELLOW','YELLOW':'GREEN','GREEN':'GREEN'}
 					if not paths[path]['Share']:
 						conditions = " or ".join(f'ocupation_{x} = \'0\'' for x in paths[i+1]['FirstPath'])
-						f.write(f'\t\t\t\tif ({conditions}) then\r\n')
-						f.write(f'\t\t\t\t\taspectState <= RED;\r\n')
-						f.write(f'\t\t\t\telse\r\n')
+						f.write(f'\t\t\t\tif ({conditions}) then\n')
+						f.write(f'\t\t\t\t\taspectState <= RED;\n')
+						f.write(f'\t\t\t\telse\n')
 
 						for j in signal_dict:
-							f.write(f'\t\t\t\t\tif (correspondence_{paths[i+1]['Signals'][1]} = {j}) then\r\n')
-							f.write(f'\t\t\t\t\t\taspectState <= {signal_dict[j]};\r\n')
-							f.write(f'\t\t\t\t\tend if;\r\n')
+							f.write(f'\t\t\t\t\tif (correspondence_{paths[i+1]['Signals'][1]} = {j}) then\n')
+							f.write(f'\t\t\t\t\t\taspectState <= {signal_dict[j]};\n')
+							f.write(f'\t\t\t\t\tend if;\n')
 					
-						f.write(f'\t\t\t\tend if;\r\n')
+						f.write(f'\t\t\t\tend if;\n')
 					else:
 						for j in signal_dict:
-							f.write(f'\t\t\t\tif (correspondence_{paths[i+1]['Signals'][1]} = {j}) then\r\n')
-							f.write(f'\t\t\t\t\taspectState <= {signal_dict[j]};\r\n')
-							f.write(f'\t\t\t\tend if;\r\n')
+							f.write(f'\t\t\t\tif (correspondence_{paths[i+1]['Signals'][1]} = {j}) then\n')
+							f.write(f'\t\t\t\t\taspectState <= {signal_dict[j]};\n')
+							f.write(f'\t\t\t\tend if;\n')
 
-				f.write(f'\t\t\twhen others =>\r\n')
-				f.write(f'\t\t\t\taspectState <= RED;\r\n')
-				f.write(f'\t\tend case;\r\n')
-				f.write(f'\tend process;\r\n') 
+				f.write(f'\t\t\twhen others =>\n')
+				f.write(f'\t\t\t\taspectState <= RED;\n')
+				f.write(f'\t\tend case;\n')
+				f.write(f'\tend process;\n') 
 			
-			f.write(f'\n\tprocess(clock)\r\n')
-			f.write(f'\tbegin\r\n')
-			f.write(f'\t\tif (clock = \'1\' and clock\'Event) then\r\n')
+			f.write(f'\n\tprocess(clock)\n')
+			f.write(f'\tbegin\n')
+			f.write(f'\t\tif (clock = \'1\' and clock\'Event) then\n')
 
-			f.write(f'\t\t\tif(reset = \'1\' or ({timeout_stop})) then\r\n')
-			f.write(f'\t\t\t\trestart <= \'1\';\r\n')
-			f.write(f'\t\t\t\tif(indication.msb = \'0\' and indication.lsb = \'0\') then\r\n')
-			f.write(f'\t\t\t\t\tcorrespondence_{name} <= RED;\r\n')
-			f.write(f'\t\t\t\tend if;\r\n')
-			f.write(f'\t\t\t\tif(indication.msb = \'1\' and indication.lsb = \'1\') then\r\n')
-			f.write(f'\t\t\t\t\tcorrespondence_{name} <= GREEN;\r\n')
-			f.write(f'\t\t\t\tend if;\r\n')
-			f.write(f'\t\t\t\tif(indication.msb = \'0\' and indication.lsb = \'1\') then\r\n')
-			f.write(f'\t\t\t\t\tcorrespondence_{name} <= DOUBLE_YELLOW;\r\n')
-			f.write(f'\t\t\t\tend if;\r\n')
-			f.write(f'\t\t\t\tif(indication.msb = \'1\' and indication.lsb = \'0\') then\r\n')
-			f.write(f'\t\t\t\t\tcorrespondence_{name} <= YELLOW;\r\n')
-			f.write(f'\t\t\t\tend if;\r\n')
-			f.write(f'\t\t\telse\r\n')
+			f.write(f'\t\t\tif(reset = \'1\' or ({timeout_stop})) then\n')
+			f.write(f'\t\t\t\trestart <= \'1\';\n')
+			f.write(f'\t\t\t\tif(indication.msb = \'0\' and indication.lsb = \'0\') then\n')
+			f.write(f'\t\t\t\t\tcorrespondence_{name} <= RED;\n')
+			f.write(f'\t\t\t\tend if;\n')
+			f.write(f'\t\t\t\tif(indication.msb = \'1\' and indication.lsb = \'1\') then\n')
+			f.write(f'\t\t\t\t\tcorrespondence_{name} <= GREEN;\n')
+			f.write(f'\t\t\t\tend if;\n')
+			f.write(f'\t\t\t\tif(indication.msb = \'0\' and indication.lsb = \'1\') then\n')
+			f.write(f'\t\t\t\t\tcorrespondence_{name} <= DOUBLE_YELLOW;\n')
+			f.write(f'\t\t\t\tend if;\n')
+			f.write(f'\t\t\t\tif(indication.msb = \'1\' and indication.lsb = \'0\') then\n')
+			f.write(f'\t\t\t\t\tcorrespondence_{name} <= YELLOW;\n')
+			f.write(f'\t\t\t\tend if;\n')
+			f.write(f'\t\t\telse\n')
 			
-			f.write(f'\t\t\t\tif (commandAux.msb = \'0\' and commandAux.lsb = \'0\' and indication.msb = \'0\' and indication.lsb = \'0\') then\r\n')
-			f.write(f'\t\t\t\t\tcorrespondence_{name} <= RED;\r\n')
-			f.write(f'\t\t\t\t\trestart <= \'1\';\r\n')
-			f.write(f'\t\t\t\tend if;\r\n')
-			f.write(f'\t\t\t\tif (commandAux.msb = \'1\' and commandAux.lsb = \'1\' and indication.msb = \'1\' and indication.lsb = \'1\') then\r\n')
-			f.write(f'\t\t\t\t\tcorrespondence_{name} <= GREEN;\r\n')
-			f.write(f'\t\t\t\t\trestart <= \'1\';\r\n')
-			f.write(f'\t\t\t\tend if;\r\n')
-			f.write(f'\t\t\t\tif (commandAux.msb = \'0\' and commandAux.lsb = \'1\' and indication.msb = \'0\' and indication.lsb = \'1\') then\r\n')
-			f.write(f'\t\t\t\t\tcorrespondence_{name} <= DOUBLE_YELLOW;\r\n')
-			f.write(f'\t\t\t\t\trestart <= \'1\';\r\n')
-			f.write(f'\t\t\t\tend if;\r\n')
-			f.write(f'\t\t\t\tif (commandAux.msb = \'1\' and commandAux.lsb = \'0\' and indication.msb = \'1\' and indication.lsb = \'0\') then\r\n')
-			f.write(f'\t\t\t\t\tcorrespondence_{name} <= YELLOW;\r\n')
-			f.write(f'\t\t\t\t\trestart <= \'1\';\r\n')
-			f.write(f'\t\t\t\tend if;\r\n')
-			f.write(f'\t\t\t\tif ((commandAux.msb /= indication.msb) or (commandAux.lsb /= indication.lsb)) then\r\n')
-			f.write(f'\t\t\t\t\tcorrespondence_{name} <= RED;\r\n')
-			f.write(f'\t\t\t\t\trestart <= \'0\';\r\n')
-			f.write(f'\t\t\t\tend if;\r\n')
+			f.write(f'\t\t\t\tif (commandAux.msb = \'0\' and commandAux.lsb = \'0\' and indication.msb = \'0\' and indication.lsb = \'0\') then\n')
+			f.write(f'\t\t\t\t\tcorrespondence_{name} <= RED;\n')
+			f.write(f'\t\t\t\t\trestart <= \'1\';\n')
+			f.write(f'\t\t\t\tend if;\n')
+			f.write(f'\t\t\t\tif (commandAux.msb = \'1\' and commandAux.lsb = \'1\' and indication.msb = \'1\' and indication.lsb = \'1\') then\n')
+			f.write(f'\t\t\t\t\tcorrespondence_{name} <= GREEN;\n')
+			f.write(f'\t\t\t\t\trestart <= \'1\';\n')
+			f.write(f'\t\t\t\tend if;\n')
+			f.write(f'\t\t\t\tif (commandAux.msb = \'0\' and commandAux.lsb = \'1\' and indication.msb = \'0\' and indication.lsb = \'1\') then\n')
+			f.write(f'\t\t\t\t\tcorrespondence_{name} <= DOUBLE_YELLOW;\n')
+			f.write(f'\t\t\t\t\trestart <= \'1\';\n')
+			f.write(f'\t\t\t\tend if;\n')
+			f.write(f'\t\t\t\tif (commandAux.msb = \'1\' and commandAux.lsb = \'0\' and indication.msb = \'1\' and indication.lsb = \'0\') then\n')
+			f.write(f'\t\t\t\t\tcorrespondence_{name} <= YELLOW;\n')
+			f.write(f'\t\t\t\t\trestart <= \'1\';\n')
+			f.write(f'\t\t\t\tend if;\n')
+			f.write(f'\t\t\t\tif ((commandAux.msb /= indication.msb) or (commandAux.lsb /= indication.lsb)) then\n')
+			f.write(f'\t\t\t\t\tcorrespondence_{name} <= RED;\n')
+			f.write(f'\t\t\t\t\trestart <= \'0\';\n')
+			f.write(f'\t\t\t\tend if;\n')
 
-			f.write(f'\t\t\tend if;\r\n')
-			f.write(f'\t\tend if;\r\n')
-			f.write(f'\tend process;\r\n')  
+			f.write(f'\t\t\tend if;\n')
+			f.write(f'\t\tend if;\n')
+			f.write(f'\tend process;\n')  
 
+			f.write(f'\n\tprocess(aspectState)\n')
+			f.write(f'\tbegin\n')
+			f.write(f'\t\tcase aspectState is\n')
+			f.write(f'\t\t\twhen RED =>\n')
+			f.write(f'\t\t\t\tcommandAux.msb <= \'0\';\n')
+			f.write(f'\t\t\t\tcommandAux.lsb <= \'0\';\n')
+			f.write(f'\t\t\twhen DOUBLE_YELLOW =>\n')
+			f.write(f'\t\t\t\tcommandAux.msb <= \'0\';\n')
+			f.write(f'\t\t\t\tcommandAux.lsb <= \'1\';\n')
+			f.write(f'\t\t\twhen YELLOW =>\n')
+			f.write(f'\t\t\t\tcommandAux.msb <= \'1\';\n')
+			f.write(f'\t\t\t\tcommandAux.lsb <= \'0\';\n')
+			f.write(f'\t\t\twhen GREEN =>\n')
+			f.write(f'\t\t\t\tcommandAux.msb <= \'1\';\n')
+			f.write(f'\t\t\t\tcommandAux.lsb <= \'1\';\n')
+			f.write(f'\t\t\twhen others =>\n')
+			f.write(f'\t\t\t\tcommandAux.msb <= \'0\';\n')
+			f.write(f'\t\t\t\tcommandAux.lsb <= \'0\';\n')
+			f.write(f'\t\tend case;\n')
+			f.write(f'\tend process;\n') 
 
-			f.write(f'\n\tprocess(aspectState)\r\n')
-			f.write(f'\tbegin\r\n')
-			f.write(f'\t\tcase aspectState is\r\n')
-			f.write(f'\t\t\twhen RED =>\r\n')
-			f.write(f'\t\t\t\tcommandAux.msb <= \'0\';\r\n')
-			f.write(f'\t\t\t\tcommandAux.lsb <= \'0\';\r\n')
-			f.write(f'\t\t\twhen DOUBLE_YELLOW =>\r\n')
-			f.write(f'\t\t\t\tcommandAux.msb <= \'0\';\r\n')
-			f.write(f'\t\t\t\tcommandAux.lsb <= \'1\';\r\n')
-			f.write(f'\t\t\twhen YELLOW =>\r\n')
-			f.write(f'\t\t\t\tcommandAux.msb <= \'1\';\r\n')
-			f.write(f'\t\t\t\tcommandAux.lsb <= \'0\';\r\n')
-			f.write(f'\t\t\twhen GREEN =>\r\n')
-			f.write(f'\t\t\t\tcommandAux.msb <= \'1\';\r\n')
-			f.write(f'\t\t\t\tcommandAux.lsb <= \'1\';\r\n')
-			f.write(f'\t\t\twhen others =>\r\n')
-			f.write(f'\t\t\t\tcommandAux.msb <= \'0\';\r\n')
-			f.write(f'\t\t\t\tcommandAux.lsb <= \'0\';\r\n')
-			f.write(f'\t\tend case;\r\n')
-			f.write(f'\tend process;\r\n') 
-
-			f.write(f'\tcommand <= commandAux;\r\n')
+			f.write(f'\tcommand <= commandAux;\n')
 			
 			f.write(f'end Behavioral;') 
 			f.close()  # Close header file
@@ -4108,55 +4143,55 @@ class ACG():
 			reserveState = " or ".join([f'{i}_command = RESERVE' for i in commands])
 			lockState = " or ".join([f'{i}_command = LOCK' for i in commands])
 
-			f.write(f'architecture Behavioral of {node} is\r\n')
+			f.write(f'architecture Behavioral of {node} is\n')
 
-			f.write(f'\tsignal commandState : routeCommands;\r\n')
+			f.write(f'\tsignal commandState : routeCommands;\n')
 
-			f.write(f'begin\r\n')
+			f.write(f'begin\n')
 
-			f.write(f'\n\tprocess(clock)\r\n')
-			f.write(f'\tbegin\r\n')
-			f.write(f'\t\tif (clock = \'1\' and clock\'Event) then\r\n')
-			f.write(f'\t\t\tif (reset = \'1\') then\r\n')
-			f.write(f'\t\t\t\tcommandState <= RELEASE;\r\n')
-			f.write(f'\t\t\telse\r\n')
-			f.write(f'\t\t\t\tif ({freeState}) then\r\n')
-			f.write(f'\t\t\t\t\tcommandState <= RELEASE;\r\n')
-			f.write(f'\t\t\t\telse\r\n')
-			f.write(f'\t\t\t\t\tif ({reserveState}) then\r\n')
-			f.write(f'\t\t\t\t\t\tcommandState <= RESERVE;\r\n')
-			f.write(f'\t\t\t\t\tend if;\r\n')
-			f.write(f'\t\t\t\t\tif ({lockState}) then\r\n')
-			f.write(f'\t\t\t\t\t\tcommandState <= LOCK;\r\n')
-			f.write(f'\t\t\t\t\tend if;\r\n')
-			f.write(f'\t\t\t\tend if;\r\n')
-			f.write(f'\t\t\tend if;\r\n')
-			f.write(f'\t\tend if;\r\n')
-			f.write(f'\tend process;\r\n') 
+			f.write(f'\n\tprocess(clock)\n')
+			f.write(f'\tbegin\n')
+			f.write(f'\t\tif (clock = \'1\' and clock\'Event) then\n')
+			f.write(f'\t\t\tif (reset = \'1\') then\n')
+			f.write(f'\t\t\t\tcommandState <= RELEASE;\n')
+			f.write(f'\t\t\telse\n')
+			f.write(f'\t\t\t\tif ({freeState}) then\n')
+			f.write(f'\t\t\t\t\tcommandState <= RELEASE;\n')
+			f.write(f'\t\t\t\telse\n')
+			f.write(f'\t\t\t\t\tif ({reserveState}) then\n')
+			f.write(f'\t\t\t\t\t\tcommandState <= RESERVE;\n')
+			f.write(f'\t\t\t\t\tend if;\n')
+			f.write(f'\t\t\t\t\tif ({lockState}) then\n')
+			f.write(f'\t\t\t\t\t\tcommandState <= LOCK;\n')
+			f.write(f'\t\t\t\t\tend if;\n')
+			f.write(f'\t\t\t\tend if;\n')
+			f.write(f'\t\t\tend if;\n')
+			f.write(f'\t\tend if;\n')
+			f.write(f'\tend process;\n') 
 
-			f.write(f'\n\tprocess(commandState)\r\n')
-			f.write(f'\tbegin\r\n')
-			f.write(f'\t\tcase commandState is\r\n')
-			f.write(f'\t\t\twhen RELEASE => -- AUTOMATIC\r\n')
+			f.write(f'\n\tprocess(commandState)\n')
+			f.write(f'\tbegin\n')
+			f.write(f'\t\tcase commandState is\n')
+			f.write(f'\r\t\t\twhen RELEASE => -- AUTOMATIC\n')
 			f.write(f'\t\t\t\tlocking <= RELEASED;\n')
-			f.write(f'\t\t\twhen RESERVE => -- DONT CHANGE\r\n')
+			f.write(f'\r\t\t\twhen RESERVE => -- DONT CHANGE\n')
 			f.write(f'\t\t\t\tlocking <= RESERVED;\n')
-			f.write(f'\t\t\twhen LOCK => -- DONT CHANGE\r\n')
+			f.write(f'\r\t\t\twhen LOCK => -- DONT CHANGE\n')
 			f.write(f'\t\t\t\tlocking <= LOCKED;\n')
-			f.write(f'\t\t\twhen others =>\r\n')
+			f.write(f'\r\t\t\twhen others =>\n')
 			f.write(f'\t\t\t\tlocking <= LOCKED;\n')
-			f.write(f'\t\tend case;\r\n')
-			f.write(f'\tend process;\r\n') 
+			f.write(f'\t\tend case;\n')
+			f.write(f'\tend process;\n') 
 
-			f.write(f'\n\tprocess(clock)\r\n')
-			f.write(f'\tbegin\r\n')
-			f.write(f'\t\tif (clock = \'1\' and clock\'Event) then\r\n')
-			f.write(f'\t\t\tif (ocupation = \'1\') then\r\n')
-			f.write(f'\t\t\t\tstate <= FREE;\r\n')
-			f.write(f'\t\t\telse\r\n')
-			f.write(f'\t\t\t\tstate <= OCCUPIED;\r\n')
-			f.write(f'\t\t\tend if;\r\n')
-			f.write(f'\t\tend if;\r\n')
+			f.write(f'\n\tprocess(clock)\n')
+			f.write(f'\tbegin\n')
+			f.write(f'\t\tif (clock = \'1\' and clock\'Event) then\n')
+			f.write(f'\t\t\tif (ocupation = \'1\') then\n')
+			f.write(f'\t\t\t\tstate <= FREE;\n')
+			f.write(f'\t\t\telse\n')
+			f.write(f'\t\t\t\tstate <= OCCUPIED;\n')
+			f.write(f'\t\t\tend if;\n')
+			f.write(f'\t\tend if;\n')
 			f.write(f'\tend process;\r\n') 
 
 			f.write(f'end Behavioral;') 
@@ -4181,37 +4216,37 @@ class ACG():
 		f.write(f'\t\t\trouteRequest : in std_logic;\n')
 	
 		for netElement in route['Path']:
-			f.write(f'\t\t\t{netElement}_state : in nodeStates;\r\n')
+			f.write(f'\t\t\t{netElement}_state : in nodeStates;\n')
 			f.write(f'\t\t\t{netElement}_lock : in objectLock;\n')
-			f.write(f'\t\t\t{netElement}_command : out routeCommands;\r\n')	
+			f.write(f'\t\t\t{netElement}_command : out routeCommands;\n')	
 
 		for levelCrossing in route['LevelCrossings']:
-			f.write(f'\t\t\t{levelCrossing}_state : in levelCrossingStates;\r\n')
-			f.write(f'\t\t\t{levelCrossing}_lock : in objectLock;\r\n')
-			f.write(f'\t\t\t{levelCrossing}_command : out routeCommands;\r\n')	
+			f.write(f'\t\t\t{levelCrossing}_state : in levelCrossingStates;\n')
+			f.write(f'\t\t\t{levelCrossing}_lock : in objectLock;\n')
+			f.write(f'\t\t\t{levelCrossing}_command : out routeCommands;\n')	
 
 		for switches in route['Switches']:
 			switch_aux = switches.split('_')
 			if len(switch_aux[1]) == 1:
-				f.write(f'\t\t\t{"s" if switch_aux[0][0].isdigit() else ""}{switch_aux[0]}_state : in singleSwitchStates;\r\n')
-				f.write(f'\t\t\t{"s" if switch_aux[0][0].isdigit() else ""}{switch_aux[0]}_lock : in objectLock;\r\n')
-				f.write(f'\t\t\t{"s" if switch_aux[0][0].isdigit() else ""}{switch_aux[0]}_command : out routeCommands;\r\n')	
+				f.write(f'\t\t\t{"s" if switch_aux[0][0].isdigit() else ""}{switch_aux[0]}_state : in singleSwitchStates;\n')
+				f.write(f'\t\t\t{"s" if switch_aux[0][0].isdigit() else ""}{switch_aux[0]}_lock : in objectLock;\n')
+				f.write(f'\t\t\t{"s" if switch_aux[0][0].isdigit() else ""}{switch_aux[0]}_command : out routeCommands;\n')	
 			if len(switch_aux[1]) == 2:
-				f.write(f'\t\t\t{"s" if switch_aux[0][0].isdigit() else ""}{switch_aux[0]}_state : in doubleSwitchStates;\r\n')
-				f.write(f'\t\t\t{"s" if switch_aux[0][0].isdigit() else ""}{switch_aux[0]}_lock : in objectLock;\r\n')
-				f.write(f'\t\t\t{"s" if switch_aux[0][0].isdigit() else ""}{switch_aux[0]}_command : out routeCommands;\r\n')
+				f.write(f'\t\t\t{"s" if switch_aux[0][0].isdigit() else ""}{switch_aux[0]}_state : in doubleSwitchStates;\n')
+				f.write(f'\t\t\t{"s" if switch_aux[0][0].isdigit() else ""}{switch_aux[0]}_lock : in objectLock;\n')
+				f.write(f'\t\t\t{"s" if switch_aux[0][0].isdigit() else ""}{switch_aux[0]}_command : out routeCommands;\n')
 
 		for scissorCrossings in route['ScissorCrossings']:
 			scissor_aux = scissorCrossings.split('_')
-			f.write(f'\t\t\t{"s" if scissor_aux[0][0].isdigit() else ""}{scissor_aux[0]}_state : in scissorCrossingStates;\r\n')
-			f.write(f'\t\t\t{"s" if scissor_aux[0][0].isdigit() else ""}{scissor_aux[0]}_lock : in objectLock;\r\n')
-			f.write(f'\t\t\t{"s" if scissor_aux[0][0].isdigit() else ""}{scissor_aux[0]}_command : out routeCommands;\r\n')	
+			f.write(f'\t\t\t{"s" if scissor_aux[0][0].isdigit() else ""}{scissor_aux[0]}_state : in scissorCrossingStates;\n')
+			f.write(f'\t\t\t{"s" if scissor_aux[0][0].isdigit() else ""}{scissor_aux[0]}_lock : in objectLock;\n')
+			f.write(f'\t\t\t{"s" if scissor_aux[0][0].isdigit() else ""}{scissor_aux[0]}_command : out routeCommands;\n')	
 
-		f.write(f'\t\t\t{route['Start']}_state : in signalStates;\r\n')
-		f.write(f'\t\t\t{route['Start']}_lock : in objectLock;\r\n')
-		f.write(f'\t\t\t{route['Start']}_command : out routeCommands;\r\n')	
+		f.write(f'\t\t\t{route['Start']}_state : in signalStates;\n')
+		f.write(f'\t\t\t{route['Start']}_lock : in objectLock;\n')
+		f.write(f'\t\t\t{route['Start']}_command : out routeCommands;\n')	
 
-		f.write(f'\t\t\t{route['End']}_state : in signalStates;\r\n')
+		f.write(f'\t\t\t{route['End']}_state : in signalStates;\n')
 		#f.write(f'\t\t\t{route['End']}_command : out routeCommands;\r\n')	
 
 		
@@ -4243,94 +4278,94 @@ class ACG():
 					sequence[i] = 1
 			timeout_stop = " and ".join([f'Q({i}) = \'{sequence[i]}\'' for i in range(FF)])
 
-			f.write(f'architecture Behavioral of {node} is\r\n')
-			f.write(f'\tcomponent flipFlop is\r\n')
-			f.write(f'\t\tport(\r\n')
-			f.write(f'\t\t\tclock : in std_logic;\r\n')
-			f.write(f'\t\t\treset : in std_logic;\r\n')
-			f.write(f'\t\t\tQ : out std_logic\r\n')
-			f.write(f'\t\t);\r\n')
+			f.write(f'architecture Behavioral of {node} is\n')
+			f.write(f'\tcomponent flipFlop is\n')
+			f.write(f'\t\tport(\n')
+			f.write(f'\t\t\tclock : in std_logic;\n')
+			f.write(f'\t\t\treset : in std_logic;\n')
+			f.write(f'\t\t\tQ : out std_logic\n')
+			f.write(f'\t\t);\n')
 			f.write(f'\tend component flipFlop;\r\n')
 
 			#routeStates is (WAITING_COMMAND,RESERVING_TRACKS,LOCKING_TRACKS,RESERVING_INFRASTRUCTURE,LOCKING_INFRASTRUCTURE,DRIVING_SIGNAL,SEQUENCIAL_RELEASE,RELEASING_INFRASTRUCTURE,RELEASING_TRACKS);\r\n')
 
-			f.write(f'\tsignal restart : std_logic := \'0\';\r\n')
-			f.write(f'\tsignal Q : std_logic_vector({FF} downto 0) := (others => \'0\');\r\n')
-			f.write(f'\tsignal routingState : routeStates;\r\n')
+			f.write(f'\tsignal restart : std_logic := \'0\';\n')
+			f.write(f'\tsignal Q : std_logic_vector({FF} downto 0) := (others => \'0\');\n')
+			f.write(f'\tsignal routingState : routeStates;\n')
 
-			f.write(f'\tsignal {" , ".join([f'{i}_used' for i in route['Path']])} : std_logic := \'0\';\r\n')
+			f.write(f'\tsignal {" , ".join([f'{i}_used' for i in route['Path']])} : std_logic := \'0\';\n')
 
 			f.write(f'begin\r\n')
 
-			f.write(f'\tgen : for i in 0 to {FF-1} generate\r\n')
-			f.write(f'\t\tinst: flipFlop port map(Q(i),restart,Q(i+1));\r\n')
-			f.write(f'\tend generate;\r\n')
+			f.write(f'\tgen : for i in 0 to {FF-1} generate\n')
+			f.write(f'\t\tinst: flipFlop port map(Q(i),restart,Q(i+1));\n')
+			f.write(f'\tend generate;\n')
 
-			f.write(f'\tQ(0) <= clock;\r\n')
+			f.write(f'\tQ(0) <= clock;\n')
 
-			f.write(f'\n\tprocess(clock)\r\n')
-			f.write(f'\tbegin\r\n')
-			f.write(f'\t\tif (clock = \'1\' and clock\'Event) then\r\n')
-			f.write(f'\t\tcase routingState is\r\n')
-			f.write(f'\t\t\twhen WAITING_COMMAND =>\r\n')
-			f.write(f'\t\t\t\trestart <= \'0\';\r\n')
+			f.write(f'\n\tprocess(clock)\n')
+			f.write(f'\tbegin\n')
+			f.write(f'\t\tif (clock = \'1\' and clock\'Event) then\n')
+			f.write(f'\t\tcase routingState is\n')
+			f.write(f'\r\t\t\twhen WAITING_COMMAND =>\n')
+			f.write(f'\t\t\t\trestart <= \'0\';\n')
 			f.write(f'\t\t\t\trouteState <= \'0\';\n')
-			f.write(f'\t\t\t\tif (routeRequest = \'1\') then\r\n')
+			f.write(f'\t\t\t\tif (routeRequest = \'1\') then\n')
 			f.write(f'\t\t\t\t\troutingState <= RESERVING_TRACKS;\n')
-			f.write(f'\t\t\t\tend if;\r\n')
+			f.write(f'\t\t\t\tend if;\n')
 
-			f.write(f'\t\t\twhen RESERVING_TRACKS =>\r\n')
+			f.write(f'\r\t\t\twhen RESERVING_TRACKS =>\n')
 
-			f.write(f'\t\t\t\tif (reset = \'1\' or ({timeout_stop})) then\r\n')
-			f.write(f'\t\t\t\t\trestart <= \'1\';\r\n')
+			f.write(f'\t\t\t\tif (reset = \'1\' or ({timeout_stop})) then\n')
+			f.write(f'\t\t\t\t\trestart <= \'1\';\n')
 			f.write(f'\t\t\t\t\trouteState <= \'0\';\n')
 			f.write(f'\t\t\t\t\troutingState <= WAITING_COMMAND;\n')
-			f.write(f'\t\t\t\tend if;\r\n')
+			f.write(f'\t\t\t\tend if;\n')
 
-			f.write(f'\t\t\t\tif (({releasedLocks}) and ({freeStates})) then\r\n')
+			f.write(f'\t\t\t\tif (({releasedLocks}) and ({freeStates})) then\n')
 			for net in route['Path']:
 				f.write(f'\t\t\t\t\t{net}_command <= RESERVE;\n')
-			f.write(f'\t\t\t\t\trestart <= \'0\';\r\n')
-			f.write(f'\t\t\t\tend if;\r\n')
-			f.write(f'\t\t\t\tif ({reservedLocks})then\r\n')
+			f.write(f'\t\t\t\t\trestart <= \'0\';\n')
+			f.write(f'\t\t\t\tend if;\n')
+			f.write(f'\t\t\t\tif ({reservedLocks})then\n')
 			f.write(f'\t\t\t\t\troutingState <= LOCKING_TRACKS;\n')
-			f.write(f'\t\t\t\tend if;\r\n')
+			f.write(f'\t\t\t\tend if;\n')
 
-			f.write(f'\t\t\twhen LOCKING_TRACKS =>\r\n')
+			f.write(f'\r\t\t\twhen LOCKING_TRACKS =>\n')
 
-			f.write(f'\t\t\t\tif (reset = \'1\' or ({timeout_stop})) then\r\n')
-			f.write(f'\t\t\t\t\trestart <= \'1\';\r\n')
+			f.write(f'\t\t\t\tif (reset = \'1\' or ({timeout_stop})) then\n')
+			f.write(f'\t\t\t\t\trestart <= \'1\';\n')
 			f.write(f'\t\t\t\t\trouteState <= \'0\';\n')
 			f.write(f'\t\t\t\t\troutingState <= WAITING_COMMAND;\n')
-			f.write(f'\t\t\t\tend if;\r\n')
+			f.write(f'\t\t\t\tend if;\n')
 
-			f.write(f'\t\t\t\tif (({reservedLocks}) and ({freeStates})) then\r\n')
+			f.write(f'\t\t\t\tif (({reservedLocks}) and ({freeStates})) then\n')
 			for net in route['Path']:
 				f.write(f'\t\t\t\t\t{net}_command <= LOCK;\n')
-			f.write(f'\t\t\t\t\trestart <= \'0\';\r\n')
-			f.write(f'\t\t\t\tend if;\r\n')
-			f.write(f'\t\t\t\tif ({lockedLocks})then\r\n')
-			f.write(f'\t\t\t\t\trestart <= \'1\';\r\n')
+			f.write(f'\t\t\t\t\trestart <= \'0\';\n')
+			f.write(f'\t\t\t\tend if;\n')
+			f.write(f'\t\t\t\tif ({lockedLocks})then\n')
+			f.write(f'\t\t\t\t\trestart <= \'1\';\n')
 			f.write(f'\t\t\t\t\troutingState <= RESERVING_INFRASTRUCTURE;\n')
-			f.write(f'\t\t\t\tend if;\r\n')
+			f.write(f'\t\t\t\tend if;\n')
 
-			f.write(f'\t\t\twhen RESERVING_INFRASTRUCTURE =>\r\n')
+			f.write(f'\r\t\t\twhen RESERVING_INFRASTRUCTURE =>\n')
 
-			f.write(f'\t\t\t\tif (reset = \'1\' or ({timeout_stop})) then\r\n')
-			f.write(f'\t\t\t\t\trestart <= \'1\';\r\n')
+			f.write(f'\t\t\t\tif (reset = \'1\' or ({timeout_stop})) then\n')
+			f.write(f'\t\t\t\t\trestart <= \'1\';\n')
 			f.write(f'\t\t\t\t\trouteState <= \'0\';\n')
 			f.write(f'\t\t\t\t\troutingState <= RELEASING_TRACKS;\n')
-			f.write(f'\t\t\t\tend if;\r\n')
+			f.write(f'\t\t\t\tend if;\n')
 			
 			lcLocksReserved = " and ".join([f'{i}_lock = RESERVED' for i in route['LevelCrossings']])
 			if route['LevelCrossings'] != []:
 				lcLocksReleased = " and ".join([f'{i}_lock = RELEASED' for i in route['LevelCrossings']])
 
-				f.write(f'\t\t\t\tif ({lcLocksReleased}) then\r\n')
+				f.write(f'\t\t\t\tif ({lcLocksReleased}) then\n')
 				for levelCrossing in route['LevelCrossings']:
 					f.write(f'\t\t\t\t\t{levelCrossing}_command <= RESERVE;\n')
-				f.write(f'\t\t\t\t\trestart <= \'0\';\r\n')
-				f.write(f'\t\t\t\tend if;\r\n')
+				f.write(f'\t\t\t\t\trestart <= \'0\';\n')
+				f.write(f'\t\t\t\tend if;\n')
 
 			scLocksReserved = " and ".join([f'{i.split('_')[0]}_lock = RESERVED' for i in route['ScissorCrossings']])
 			if route['ScissorCrossings'] != []:
@@ -4340,35 +4375,35 @@ class ACG():
 				for scissorCrossing in route['ScissorCrossings']:
 					f.write(f'\t\t\t\t\t{scissorCrossing.split('_')[0]}_command <= RESERVE;\n')
 
-				f.write(f'\t\t\t\t\trestart <= \'0\';\r\n')
-				f.write(f'\t\t\t\tend if;\r\n')
+				f.write(f'\t\t\t\t\trestart <= \'0\';\n')
+				f.write(f'\t\t\t\tend if;\n')
 
 			swLocksReserved = " and ".join([f'{"s" if i[0].isdigit() else ""}{i.split('_')[0]}_lock = RESERVED' for i in route['Switches']])
 			if route['Switches'] != []:
 				swLocksReleased = " and ".join([f'{"s" if i[0].isdigit() else ""}{i.split('_')[0]}_lock = RELEASED' for i in route['Switches']])
 
-				f.write(f'\t\t\t\tif ({swLocksReleased}) then\r\n')
+				f.write(f'\t\t\t\tif ({swLocksReleased}) then\n')
 				for switches in route['Switches']:
 					f.write(f'\t\t\t\t\t{"s" if switches[0].isdigit() else ""}{switches.split('_')[0]}_command <= RESERVE;\n')
-				f.write(f'\t\t\t\t\trestart <= \'0\';\r\n')
-				f.write(f'\t\t\t\tend if;\r\n')
+				f.write(f'\t\t\t\t\trestart <= \'0\';\n')
+				f.write(f'\t\t\t\tend if;\n')
 
 			infraestructure = [lcLocksReserved, scLocksReserved, swLocksReserved]
 			generalReserve = " and ".join(s for s in infraestructure if s)
 			if any(element != '' for element in infraestructure):
-				f.write(f'\t\t\t\tif ({generalReserve})then\r\n')
+				f.write(f'\t\t\t\tif ({generalReserve})then\n')
 				f.write(f'\t\t\t\t\troutingState <= LOCKING_INFRASTRUCTURE;\n')
-				f.write(f'\t\t\t\tend if;\r\n')
+				f.write(f'\t\t\t\tend if;\n')
 			else:
 				f.write(f'\t\t\t\troutingState <= LOCKING_INFRASTRUCTURE;\n')
 
-			f.write(f'\t\t\twhen LOCKING_INFRASTRUCTURE =>\r\n')
+			f.write(f'\r\t\t\twhen LOCKING_INFRASTRUCTURE =>\n')
 
-			f.write(f'\t\t\t\tif (reset = \'1\' or ({timeout_stop})) then\r\n')
-			f.write(f'\t\t\t\t\trestart <= \'1\';\r\n')
+			f.write(f'\t\t\t\tif (reset = \'1\' or ({timeout_stop})) then\n')
+			f.write(f'\t\t\t\t\trestart <= \'1\';\n')
 			f.write(f'\t\t\t\t\trouteState <= \'0\';\n')
 			f.write(f'\t\t\t\t\troutingState <= RELEASING_INFRASTRUCTURE;\n')
-			f.write(f'\t\t\t\tend if;\r\n')
+			f.write(f'\t\t\t\tend if;\n')
 			
 			lcLocksLocked = " and ".join([f'{i}_lock = LOCKED' for i in route['LevelCrossings']])
 			if route['LevelCrossings'] != []:
@@ -4377,11 +4412,11 @@ class ACG():
 				
 				lcStatesDown = " and ".join([f'{i}_state = DOWN' for i in route['LevelCrossings']])
 
-				f.write(f'\t\t\t\tif ({lcLocksReserved} and {lcStatesDown}) then\r\n')
+				f.write(f'\t\t\t\tif ({lcLocksReserved} and {lcStatesDown}) then\n')
 				for levelCrossing in route['LevelCrossings']:
 					f.write(f'\t\t\t\t\t{levelCrossing}_command <= LOCK;\n')
-				f.write(f'\t\t\t\t\trestart <= \'0\';\r\n')
-				f.write(f'\t\t\t\tend if;\r\n')
+				f.write(f'\t\t\t\t\trestart <= \'0\';\n')
+				f.write(f'\t\t\t\tend if;\n')
 
 			scLocksLocked = " and ".join([f'{i.split('_')[0]}_lock = LOCKED' for i in route['ScissorCrossings']])
 			if route['ScissorCrossings'] != []:
@@ -4390,11 +4425,11 @@ class ACG():
 				
 				scStates = " and ".join([f'{i.split('_')[0]}_state = {"NORMAL" if i[-1] == "N" else "REVERSE"}' for i in route['ScissorCrossings']])
 				
-				f.write(f'\t\t\t\tif ({scLocksReleased} and {scStates}) then\r\n')
+				f.write(f'\t\t\t\tif ({scLocksReleased} and {scStates}) then\n')
 				for scissorCrossing in route['ScissorCrossings']:
 					f.write(f'\t\t\t\t\t{scissorCrossing.split('_')[0]}_command <= LOCK;\n')
-				f.write(f'\t\t\t\t\trestart <= \'0\';\r\n')
-				f.write(f'\t\t\t\tend if;\r\n')
+				f.write(f'\t\t\t\t\trestart <= \'0\';\n')
+				f.write(f'\t\t\t\tend if;\n')
 
 			swLocksLocked = " and ".join([f'{"s" if i[0].isdigit() else ""}{i.split('_')[0]}_lock = LOCKED' for i in route['Switches']])
 			sw_dict = {'N':'NORMAL','R':'REVERSE','NN':'DOUBLE_NORMAL','RR':'DOUBLE_REVERSE','RN':'REVERSE_NORMAL','NR':'NORMAL_REVERSE','XN':'NORMAL','XR':'REVERSE'}
@@ -4404,61 +4439,59 @@ class ACG():
 				
 				swStates = " and ".join([f'{"s" if i[0].isdigit() else ""}{i.split('_')[0]}_state = {sw_dict[i.split('_')[1]]}' for i in route['Switches']])
 				
-				f.write(f'\t\t\t\tif ({swLocksReleased} and {swStates}) then\r\n')
+				f.write(f'\t\t\t\tif ({swLocksReleased} and {swStates}) then\n')
 				for switch in route['Switches']:
 					f.write(f'\t\t\t\t\t{"s" if switch[0].isdigit() else ""}{switch.split('_')[0]}_command <= LOCK;\n')
-				f.write(f'\t\t\t\t\trestart <= \'0\';\r\n')
-				f.write(f'\t\t\t\tend if;\r\n')
+				f.write(f'\t\t\t\t\trestart <= \'0\';\n')
+				f.write(f'\t\t\t\tend if;\n')
 
 			infraestructure = [lcLocksLocked, scLocksLocked, swLocksLocked]
 			generalLock = " and ".join(s for s in infraestructure if s)
 			if any(element != '' for element in infraestructure):
-				f.write(f'\t\t\t\tif ({generalLock})then\r\n')
+				f.write(f'\t\t\t\tif ({generalLock})then\n')
 				f.write(f'\t\t\t\t\troutingState <= DRIVING_SIGNAL;\n')
-				f.write(f'\t\t\t\tend if;\r\n')
+				f.write(f'\t\t\t\tend if;\n')
 			else:
 				f.write(f'\t\t\t\troutingState <= DRIVING_SIGNAL;\n')
 
-			f.write(f'\t\t\twhen DRIVING_SIGNAL =>\r\n')
+			f.write(f'\r\t\t\twhen DRIVING_SIGNAL =>\n')
 
-			f.write(f'\t\t\t\tif (reset = \'1\' or ({timeout_stop})) then\r\n')
-			f.write(f'\t\t\t\t\trestart <= \'1\';\r\n')
+			f.write(f'\t\t\t\tif (reset = \'1\' or ({timeout_stop})) then\n')
+			f.write(f'\t\t\t\t\trestart <= \'1\';\n')
 			f.write(f'\t\t\t\t\trouteState <= \'0\';\n')
 			f.write(f'\t\t\t\t\troutingState <= RELEASING_INFRASTRUCTURE;\n')
-			f.write(f'\t\t\t\tend if;\r\n')
+			f.write(f'\t\t\t\tend if;\n')
 
-			f.write(f'\t\t\t\tif ({route['Start']}_lock = RELEASED) then\r\n')
+			f.write(f'\t\t\t\tif ({route['Start']}_lock = RELEASED) then\n')
 			f.write(f'\t\t\t\t\t{route['Start']}_command <= RESERVE;\n')
-			f.write(f'\t\t\t\tend if;\r\n')
+			f.write(f'\t\t\t\tend if;\n')
 			
-			f.write(f'\t\t\t\tif ({route['Start']}_lock = RESERVED and {route['Start']}_state /= RED) then\r\n')
-			f.write(f'\t\t\t\t\trestart <= \'0\';\r\n')
+			f.write(f'\t\t\t\tif ({route['Start']}_lock = RESERVED and {route['Start']}_state /= RED) then\n')
+			f.write(f'\t\t\t\t\trestart <= \'0\';\n')
 			f.write(f'\t\t\t\t\trouteState <= \'1\';\n')
 			f.write(f'\t\t\t\t\t{route['Start']}_command <= LOCK;\n')
 			f.write(f'\t\t\t\t\troutingState <= SEQUENTIAL_RELEASE;\n')
-			f.write(f'\t\t\t\tend if;\r\n')
+			f.write(f'\t\t\t\tend if;\n')
 
-			f.write(f'\t\t\twhen SEQUENTIAL_RELEASE =>\r\n')
+			f.write(f'\r\t\t\twhen SEQUENTIAL_RELEASE =>\n')
 
-			f.write(f'\t\t\t\t--- Sequential release\r\n')
+			f.write(f'\t\t\t\t--- Sequential release\n')
 
 			for net in route['Path']:
-				f.write(f'\t\t\t\t\tif ({net}_used = \'0\' and {net}_state = OCCUPIED) then \r\n')
-				f.write(f'\t\t\t\t\t\t{net}_used <= \'1\';\r\n')
-				f.write(f'\t\t\t\t\tend if;\r\n')
-
-
-				f.write(f'\t\t\t\t\tif ({net}_used = \'1\' and {net}_state = FREE) then\r\n')
-				f.write(f'\t\t\t\t\t\t{net}_used <= \'0\';\r\n')
-				f.write(f'\t\t\t\t\t\t{net}_command <= RELEASE;\n')
-				
-
+				f.write(f'\t\t\t\tif ({net}_used = \'0\' and {net}_state = OCCUPIED) then \n')
+				f.write(f'\t\t\t\t\t{net}_used <= \'1\';\n')
 				if net == route['Path'][-1]:
-					f.write(f'\t\t\t\t\t\t--- Finish -> Release all\r\n')
+					f.write(f'\t\t\t\t\t--- Finish -> Release all\n')
 					f.write(f'\t\t\t\t\troutingState <= RELEASING_INFRASTRUCTURE;\n')
-				f.write(f'\t\t\t\t\tend if;\r\n')
+				f.write(f'\t\t\t\tend if;\n')
 
-			f.write(f'\t\t\twhen RELEASING_INFRASTRUCTURE =>\r\n')
+				if net != route['Path'][-1]:
+					f.write(f'\t\t\t\tif ({net}_used = \'1\' and {net}_state = FREE) then\n')
+					f.write(f'\t\t\t\t\t{net}_used <= \'0\';\n')
+					f.write(f'\t\t\t\t\t{net}_command <= RELEASE;\n')
+					f.write(f'\t\t\t\tend if;\n')
+
+			f.write(f'\r\t\t\twhen RELEASING_INFRASTRUCTURE =>\n')
 
 			if route['LevelCrossings'] != []:
 				for levelCrossing in route['LevelCrossings']:
@@ -4473,14 +4506,14 @@ class ACG():
 			f.write(f'\t\t\t\trouteState <= \'0\';\n')
 			f.write(f'\t\t\t\troutingState <= RELEASING_TRACKS;\n')
 
-			f.write(f'\t\t\twhen RELEASING_TRACKS =>\r\n')
+			f.write(f'\r\t\t\twhen RELEASING_TRACKS =>\n')
 
 			for net in route['Path']:
 				f.write(f'\t\t\t\t{net}_command <= RELEASE;\n')
 			f.write(f'\t\t\t\trouteState <= \'0\';\n')
 			f.write(f'\t\t\t\troutingState <= WAITING_COMMAND;\n')
 
-			f.write(f'\t\t\twhen others =>\r\n')
+			f.write(f'\r\t\t\twhen others =>\n')
 			f.write(f'\t\t\t\trouteState <= \'0\';\n')
 			f.write(f'\t\t\t\troutingState <= WAITING_COMMAND;\n')
 			f.write(f'\t\tend case;\r\n')
@@ -4721,7 +4754,7 @@ class ACG():
 		#	print('R'+str(route),routes[route])
 
 		# Enable to plot graph
-		#self.create_graph(RML,network,example)
+		self.create_graph(RML,network,example)
 
 		# Calculate N and M
 		N,M,n_netElements,n_switches,n_doubleSwitch,n_scissorCrossings,n_levelCrossings,n_signals_1,n_signals_2,n_signals_3 = self.calculate_parameters(network)
