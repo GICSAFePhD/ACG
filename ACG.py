@@ -240,6 +240,8 @@ class ACG():
 		Routes =            RML.Interlocking.AssetsForIL[0].Routes
 
 		Graph = gv.Graph('finite_state_machine',filename='a.gv', graph_attr={'overlap':'false','rankdir':"LR",'splines':'true','center':'1','labelloc':'t'},node_attr={'fillcolor': 'white', 'style': 'filled,bold', 'pendwidth':'5', 'fontname': 'Courier New', 'shape': 'Mrecord'}) #node_attr={'color': 'lightgreen', 'style': 'filled', 'size' : '8.5'}
+		
+		
 		G_Topology = nx.Graph()
 
 		Signal_net = {}
