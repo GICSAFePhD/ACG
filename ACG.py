@@ -563,14 +563,14 @@ class ACG():
 		wrapper = 'global'
 		f.write(f'\tentity {wrapper} is\n')
 		f.write(f'\t\tport(\n')
-		f.write(f'\t\t\tclock : in std_logic;\n')
-		f.write(f'\t\t\tuart_rxd_i : in std_logic;\n')
-		f.write(f'\t\t\tuart_txd_o : out std_logic;\n')
-		f.write(f'\t\t\tleds : out std_logic_vector(4-1 downto 0);\n')
-		f.write(f'\t\t\trgb_1 : out std_logic_vector(3-1 downto 0);\n')
-		f.write(f'\t\t\trgb_2 : out std_logic_vector(3-1 downto 0);\n')
-		f.write(f'\t\t\tselector1 : in std_logic;\n')
-		f.write(f'\t\t\tselector2 : in std_logic\n')
+		f.write(f'\t\t\tclock : in std_logic := \'0\';\n')
+		f.write(f'\t\t\tuart_rxd_i : in std_logic := \'0\';\n')
+		f.write(f'\t\t\tuart_txd_o : out std_logic := \'0\';\n')
+		f.write(f'\t\t\tleds : out std_logic_vector(4-1 downto 0) := (others => \'0\');\n')
+		f.write(f'\t\t\trgb_1 : out std_logic_vector(3-1 downto 0) := (others => \'0\');\n')
+		f.write(f'\t\t\trgb_2 : out std_logic_vector(3-1 downto 0) := (others => \'0\');\n')
+		f.write(f'\t\t\tselector1 : in std_logic := \'0\';\n')
+		f.write(f'\t\t\tselector2 : in std_logic := \'0\'\n')
 		f.write(f'\t\t);\n')
 		f.write(f'\tend entity {wrapper};\r\n') 
 	
@@ -614,7 +614,7 @@ class ACG():
 		
 		f.write(f'\tsignal w_data_signal, r_dataSignal: std_logic_vector(7 downto 0);\n')
 		f.write(f'\tsignal rd_uart_signal, wr_uart_signal: std_logic;\n')
-		f.write(f'\tsignal emptySignal,empty_s,tx_empty_s,switch_s,reset_s,reset_uart: std_logic;\n')
+		f.write(f'\tsignal emptySignal,reset_s,reset_uart: std_logic;\n')
 		f.write(f'\tsignal led_s : std_logic_vector(4-1 downto 0);\n')
 		f.write(f'\tsignal led_rgb_1,led_rgb_2 : std_logic_vector(3-1 downto 0);\n\r')
 		f.write(f'\tsignal N_s : integer;\n')
@@ -700,13 +700,13 @@ class ACG():
 		uartControl = "uartControl"
 		f.write(f'\tentity {uartControl} is\n')
 		f.write(f'\t\tport(\n')
-		f.write(f'\t\t\tclock : in std_logic;\n')
-		f.write(f'\t\t\tN : out integer;\n')
-		f.write(f'\t\t\twrite : in std_logic;\n')
-		f.write(f'\t\t\tempty_in : in std_logic;\n')
-		f.write(f'\t\t\trd_uart : out std_logic;\n')
-		f.write(f'\t\t\twr_uart : out std_logic;\n')
-		f.write(f'\t\t\treset : in std_logic\n')
+		f.write(f'\t\t\tclock : in std_logic := \'0\';\n')
+		f.write(f'\t\t\tN : out integer := 0;\n')
+		f.write(f'\t\t\twrite : in std_logic := \'0\';\n')
+		f.write(f'\t\t\tempty_in : in std_logic := \'0\';\n')
+		f.write(f'\t\t\trd_uart : out std_logic := \'0\';\n')
+		f.write(f'\t\t\twr_uart : out std_logic := \'0\';\n')
+		f.write(f'\t\t\treset : in std_logic := \'0\'\n')
 		f.write(f'\t\t);\n')
 		f.write(f'\tend entity {uartControl};\r\n')
 
@@ -778,23 +778,23 @@ class ACG():
 		f.write(f'\t\t);\n')
 		f.write(f'\t\tport(\n')
 		f.write(f'\t\t\tclk : in std_logic;\n')
-		f.write(f'\t\t\trd_uart, wr_uart : in std_logic;\n')
-		f.write(f'\t\t\trx : in std_logic;\n')
-		f.write(f'\t\t\tw_data : in std_logic_vector(8-1 downto 0);\n')
-		f.write(f'\t\t\ttx_full, rx_empty : out std_logic;\n')
-		f.write(f'\t\t\tr_data : out std_logic_vector(8-1 downto 0) ;\n')
-		f.write(f'\t\t\ttx : out std_logic\n')
+		f.write(f'\t\t\trd_uart, wr_uart : in std_logic := \'0\';\n')
+		f.write(f'\t\t\trx : in std_logic := \'0\';\n')
+		f.write(f'\t\t\tw_data : in std_logic_vector(8-1 downto 0) := (others => \'0\');\n')
+		f.write(f'\t\t\ttx_full, rx_empty : out std_logic := \'0\';\n')
+		f.write(f'\t\t\tr_data : out std_logic_vector(8-1 downto 0) := (others => \'0\');\n')
+		f.write(f'\t\t\ttx : out std_logic := \'0\'\n')
 		f.write(f'\t\t);\n')
 		f.write(f'\tend entity {uart};\r\n') 
 	
 		f.write(f'architecture Behavioral of {uart} is\r\n')            
 		
-		f.write(f'\tsignal rx_done_tick : std_logic;\n')
-		f.write(f'\tsignal tick : std_logic;\n')
-		f.write(f'\tsignal tx_fifo_out : std_logic_vector(8-1 downto 0);\n')
-		f.write(f'\tsignal rx_data_out : std_logic_vector(8-1 downto 0);\n')
-		f.write(f'\tsignal tx_empty, tx_fifo_not_empty : std_logic;\n')
-		f.write(f'\tsignal tx_done_tick : std_logic;\r\n')
+		f.write(f'\tsignal rx_done_tick : std_logic := \'0\';\n')
+		f.write(f'\tsignal tick : std_logic := \'0\';\n')
+		f.write(f'\tsignal tx_fifo_out : std_logic_vector(8-1 downto 0) := (others => \'0\');\n')
+		f.write(f'\tsignal rx_data_out : std_logic_vector(8-1 downto 0) := (others => \'0\');\n')
+		f.write(f'\tsignal tx_empty, tx_fifo_not_empty : std_logic := \'0\';\n')
+		f.write(f'\tsignal tx_done_tick : std_logic := \'0\';\r\n')
 		
 		f.write(f'begin\r\n')
 		
@@ -852,16 +852,16 @@ class ACG():
 		f.write(f'\t\t\tM : integer := 10 -- mod-M;\n')
 		f.write(f'\t\t);\n')
 		f.write(f'\t\tport(\n')
-		f.write(f'\t\t\tclk : in std_logic;\n')
-		f.write(f'\t\t\tmax_tick : out std_logic;\n')
-		f.write(f'\t\t\tq : out std_logic_vector(N-1 downto 0)\n')
+		f.write(f'\t\t\tclk : in std_logic := \'0\';\n')
+		f.write(f'\t\t\tmax_tick : out std_logic := \'0\';\n')
+		f.write(f'\t\t\tq : out std_logic_vector(N-1 downto 0) := (others => \'0\')\n')
 		f.write(f'\t\t);\n')
 		f.write(f'\tend entity {uart_baud_gen};\r\n') 
 
 		f.write(f'architecture Behavioral of {uart_baud_gen} is\r\n')            
 		
-		f.write(f'\tsignal r_reg : unsigned(N-1 downto 0);\n')
-		f.write(f'\tsignal r_next : unsigned(N-1 downto 0);\r\n')
+		f.write(f'\tsignal r_reg : unsigned(N-1 downto 0) := (others => \'0\');\n')
+		f.write(f'\tsignal r_next : unsigned(N-1 downto 0) := (others => \'0\');\r\n')
 		
 		f.write(f'begin\r\n')
 		
@@ -902,23 +902,23 @@ class ACG():
 		f.write(f'\t\t\tSB_TICK : integer := 16 -- # ticks for stop bits;\n')
 		f.write(f'\t\t);\n')
 		f.write(f'\t\tport(\n')
-		f.write(f'\t\t\tclk : in std_logic;\n')
-		f.write(f'\t\t\ttx_start : in std_logic;\n')
-		f.write(f'\t\t\ts_tick : in std_logic;\n')
-		f.write(f'\t\t\td_in : in std_logic_vector(8-1 downto 0);\n')
-		f.write(f'\t\t\ttx_done_tick : out std_logic;\n')
-		f.write(f'\t\t\ttx : out std_logic\n')
+		f.write(f'\t\t\tclk : in std_logic := \'0\';\n')
+		f.write(f'\t\t\ttx_start : in std_logic := \'0\';\n')
+		f.write(f'\t\t\ts_tick : in std_logic := \'0\';\n')
+		f.write(f'\t\t\td_in : in std_logic_vector(8-1 downto 0) := (others => \'0\');\n')
+		f.write(f'\t\t\ttx_done_tick : out std_logic := \'0\';\n')
+		f.write(f'\t\t\ttx : out std_logic := \'0\'\n')
 		f.write(f'\t\t);\n')
 		f.write(f'\tend entity {uart_tx};\r\n') 
 	
 		f.write(f'architecture Behavioral of {uart_tx} is\r\n')            
 		
 		f.write(f'\ttype state_type is (idle, start, data, stop);\n')
-		f.write(f'\tsignal state_reg, state_next: state_type;\n')
-		f.write(f'\tsignal s_reg, s_next: unsigned(3 downto 0);\n')
-		f.write(f'\tsignal n_reg, n_next: unsigned(2 downto 0);\n')
-		f.write(f'\tsignal b_reg, b_next: std_logic_vector(7 downto 0);\n')
-		f.write(f'\tsignal tx_reg, tx_next: std_logic;\r\n')
+		f.write(f'\tsignal state_reg, state_next: state_type := idle;\n')
+		f.write(f'\tsignal s_reg, s_next: unsigned(3 downto 0) := (others => \'0\');\n')
+		f.write(f'\tsignal n_reg, n_next: unsigned(2 downto 0) := (others => \'0\');\n')
+		f.write(f'\tsignal b_reg, b_next: std_logic_vector(7 downto 0) := (others => \'0\');\n')
+		f.write(f'\tsignal tx_reg, tx_next: std_logic := \'0\';\r\n')
 		
 		f.write(f'begin\r\n')
 		
@@ -1014,21 +1014,21 @@ class ACG():
 		f.write(f'\t\t\tSB_TICK : integer := 16 -- # ticks for stop bits;\n')
 		f.write(f'\t\t);\n')
 		f.write(f'\t\tport(\n')
-		f.write(f'\t\t\tclk : in std_logic;\n')
-		f.write(f'\t\t\trx : in std_logic;\n')
-		f.write(f'\t\t\ts_tick : in std_logic;\n')
-		f.write(f'\t\t\trx_done_tick : out std_logic;\n')
-		f.write(f'\t\t\td_out : out std_logic_vector(8-1 downto 0)\n')
+		f.write(f'\t\t\tclk : in std_logic := \'0\';\n')
+		f.write(f'\t\t\trx : in std_logic := \'0\';\n')
+		f.write(f'\t\t\ts_tick : in std_logic := \'0\';\n')
+		f.write(f'\t\t\trx_done_tick : out std_logic := \'0\';\n')
+		f.write(f'\t\t\td_out : out std_logic_vector(8-1 downto 0) := (others => \'0\')\n')
 		f.write(f'\t\t);\n')
 		f.write(f'\tend entity {uart_rx};\r\n') 
 	
 		f.write(f'architecture Behavioral of {uart_rx} is\r\n')            
 		
 		f.write(f'\ttype state_type is (idle, start, data, stop);\n')
-		f.write(f'\tsignal state_reg, state_next: state_type;\n')
-		f.write(f'\tsignal s_reg, s_next: unsigned(3 downto 0);\n')
-		f.write(f'\tsignal n_reg, n_next: unsigned(2 downto 0);\n')
-		f.write(f'\tsignal b_reg, b_next: std_logic_vector(8-1 downto 0);\r\n')
+		f.write(f'\tsignal state_reg, state_next: state_type :=  idle;\n')
+		f.write(f'\tsignal s_reg, s_next: unsigned(3 downto 0) := (others => \'0\');\n')
+		f.write(f'\tsignal n_reg, n_next: unsigned(2 downto 0) := (others => \'0\');\n')
+		f.write(f'\tsignal b_reg, b_next: std_logic_vector(8-1 downto 0) := (others => \'0\');\r\n')
 		
 		f.write(f'begin\r\n')
 		
@@ -1117,11 +1117,11 @@ class ACG():
 		f.write(f'\t\t\tW : natural := 4  -- number of address bits;\n')
 		f.write(f'\t\t);\n')
 		f.write(f'\t\tport(\n')
-		f.write(f'\t\t\tclk : in std_logic;\n')
-		f.write(f'\t\t\trd, wr : in std_logic;\n')
-		f.write(f'\t\t\tw_data : in std_logic_vector(B-1 downto 0);\n')
-		f.write(f'\t\t\tempty, full : out std_logic;\n')
-		f.write(f'\t\t\tr_data : out std_logic_vector(B-1 downto 0)\n')
+		f.write(f'\t\t\tclk : in std_logic := \'0\';\n')
+		f.write(f'\t\t\trd, wr : in std_logic := \'0\';\n')
+		f.write(f'\t\t\tw_data : in std_logic_vector(B-1 downto 0) := (others => \'0\');\n')
+		f.write(f'\t\t\tempty, full : out std_logic := \'0\';\n')
+		f.write(f'\t\t\tr_data : out std_logic_vector(B-1 downto 0) := (others => \'0\')\n')
 		f.write(f'\t\t);\n')
 		f.write(f'\tend entity {fifo};\r\n') 
 	
@@ -1129,11 +1129,11 @@ class ACG():
 		
 		f.write(f'\ttype reg_file_type is array (2**W-1 downto 0) of std_logic_vector(B-1 downto 0);\n') 
 		f.write(f'\tsignal array_reg: reg_file_type;\n')
-		f.write(f'\tsignal w_ptr_reg, w_ptr_next, w_ptr_succ: std_logic_vector(W-1 downto 0);\n')
-		f.write(f'\tsignal r_ptr_reg, r_ptr_next, r_ptr_succ: std_logic_vector(W-1 downto 0);\n')
-		f.write(f'\tsignal full_reg, empty_reg, full_next, empty_next: std_logic;\n')
-		f.write(f'\tsignal wr_op: std_logic_vector (1 downto 0);\n')
-		f.write(f'\tsignal wr_en: std_logic;\r\n')
+		f.write(f'\tsignal w_ptr_reg, w_ptr_next, w_ptr_succ: std_logic_vector(W-1 downto 0) := (others => \'0\');\n')
+		f.write(f'\tsignal r_ptr_reg, r_ptr_next, r_ptr_succ: std_logic_vector(W-1 downto 0) := (others => \'0\');\n')
+		f.write(f'\tsignal full_reg, empty_reg, full_next, empty_next: std_logic := \'0\';\n')
+		f.write(f'\tsignal wr_op: std_logic_vector (1 downto 0) := (others => \'0\');\n')
+		f.write(f'\tsignal wr_en: std_logic := \'0\';\r\n')
 		
 		f.write(f'begin\r\n')
 		
@@ -1228,19 +1228,19 @@ class ACG():
 		system = "system"
 		f.write(f'\tentity {system} is\n')
 		f.write(f'\t\tport(\n')
-		f.write(f'\t\t\tclock :  in std_logic;\n')
-		f.write(f'\t\t\tr_data :  in std_logic_vector(8-1 downto 0);\n')
-		f.write(f'\t\t\tr_available :  in std_logic;\n')
+		f.write(f'\t\t\tclock :  in std_logic := \'0\';\n')
+		f.write(f'\t\t\tr_data :  in std_logic_vector(8-1 downto 0) := (others => \'0\');\n')
+		f.write(f'\t\t\tr_available :  in std_logic := \'0\';\n')
 		#f.write(f'\t\t\tread :  out std_logic;\n')
-		f.write(f'\t\t\twrite :  out std_logic;\n')
-		f.write(f'\t\t\tselector1 :  in std_logic;\n')
-		f.write(f'\t\t\tselector2 :  in std_logic;\n')
-		f.write(f'\t\t\treset_uart :  out std_logic;\n')
-		f.write(f'\t\t\tN :  in integer;\n')
-		f.write(f'\t\t\tleds :  out std_logic_vector(4-1 downto 0);\n')
-		f.write(f'\t\t\tled_rgb_1 :  out std_logic_vector(3-1 downto 0);\n')
-		f.write(f'\t\t\tled_rgb_2 :  out std_logic_vector(3-1 downto 0);\n')
-		f.write(f'\t\t\tw_data :  out std_logic_vector(8-1 downto 0)\n')
+		f.write(f'\t\t\twrite :  out std_logic := \'0\';\n')
+		f.write(f'\t\t\tselector1 :  in std_logic := \'0\';\n')
+		f.write(f'\t\t\tselector2 :  in std_logic := \'0\';\n')
+		f.write(f'\t\t\treset_uart :  out std_logic := \'0\';\n')
+		f.write(f'\t\t\tN :  in integer := 0;\n')
+		f.write(f'\t\t\tleds :  out std_logic_vector(4-1 downto 0) := (others => \'0\');\n')
+		f.write(f'\t\t\tled_rgb_1 :  out std_logic_vector(3-1 downto 0) := (others => \'0\');\n')
+		f.write(f'\t\t\tled_rgb_2 :  out std_logic_vector(3-1 downto 0) := (others => \'0\');\n')
+		f.write(f'\t\t\tw_data :  out std_logic_vector(8-1 downto 0) := (others => \'0\')\n')
 		f.write(f'\t\t);\n')
 		f.write(f'\tend entity {system};\r\n') 
 
@@ -1410,24 +1410,25 @@ class ACG():
 		detector = "detector"
 		f.write(f'\tentity {detector} is\n')
 		f.write(f'\t\tport(\n')
-		f.write(f'\t\t\tClock : in std_logic;\n')
-		f.write(f'\t\t\tr_data : in std_logic_vector(8-1 downto 0);\n')
-		f.write(f'\t\t\tr_available : in std_logic;\n')
-		f.write(f'\t\t\tled_rgb_1 : out std_logic_vector(3-1 downto 0);\n')
-		f.write(f'\t\t\tled_rgb_2 : out std_logic_vector(3-1 downto 0);\n')
-		f.write(f'\t\t\tpacket : out std_logic_vector({str(N)}-1 downto 0);\n')
-		f.write(f'\t\t\tprocessing : in std_logic;\n')
-		f.write(f'\t\t\tprocessed : out std_logic;\n')
-		f.write(f'\t\t\tN : in integer;\n')
-		f.write(f'\t\t\twr_uart : out std_logic;\n')
-		f.write(f'\t\t\tw_data : out std_logic_vector(8-1 downto 0)\n')
+		f.write(f'\t\t\tClock : in std_logic := \'0\';\n')
+		f.write(f'\t\t\tr_data : in std_logic_vector(8-1 downto 0) := (others => \'0\');\n')
+		f.write(f'\t\t\tr_available : in std_logic := \'0\';\n')
+		f.write(f'\t\t\tled_rgb_1 : out std_logic_vector(3-1 downto 0) := (others => \'0\');\n')
+		f.write(f'\t\t\tled_rgb_2 : out std_logic_vector(3-1 downto 0) := (others => \'0\');\n')
+		f.write(f'\t\t\tpacket : out std_logic_vector({str(N)}-1 downto 0) := (others => \'0\');\n')
+		f.write(f'\t\t\tprocessing : in std_logic := \'0\';\n')
+		f.write(f'\t\t\tprocessed : out std_logic := \'0\';\n')
+		f.write(f'\t\t\tN : in integer := 0;\n')
+		f.write(f'\t\t\twr_uart : out std_logic := \'0\';\n')
+		f.write(f'\t\t\tw_data : out std_logic_vector(8-1 downto 0) := (others => \'0\')\n')
 		f.write(f'\t\t);\n')
 		f.write(f'\tend entity {detector};\r\n') 
 	
 		f.write(f'architecture Behavioral of {detector} is\r\n')
 		
 		f.write(f'\ttype states_t is (start,reading,final,error);\n') 
-		f.write(f'\tsignal state, next_state : states_t := start;\n') 
+		f.write(f'\tsignal state : states_t := start;\n') 
+		f.write(f'\tsignal next_state : states_t := reading;\n') 
 		 
 		f.write(f'\tshared variable counter : integer range 0 to {str(round(N*1.5))} := 0;\n')
 		
@@ -1619,11 +1620,11 @@ class ACG():
 		f.write(f'\t\t\tN_TRACKCIRCUITS : natural := {str(n_netElements)}\n')
 		f.write(f'\t\t);\n')
 		f.write(f'\t\tport(\n')
-		f.write(f'\t\t\tclock : in std_logic;\n')
-		f.write(f'\t\t\tprocessing : in std_logic;\n')
-		f.write(f'\t\t\tprocessed : out std_logic;\n')
-		f.write(f'\t\t\tpacket_i : in std_logic_vector({str(N)}-1 downto 0);\n')
-		f.write(f'\t\t\tpacket_o : out std_logic_vector({str(M)}-1 downto 0)\n')
+		f.write(f'\t\t\tclock : in std_logic := \'0\';\n')
+		f.write(f'\t\t\tprocessing : in std_logic := \'0\';\n')
+		f.write(f'\t\t\tprocessed : out std_logic := \'0\';\n')
+		f.write(f'\t\t\tpacket_i : in std_logic_vector({str(N)}-1 downto 0) := (others => \'0\');\n')
+		f.write(f'\t\t\tpacket_o : out std_logic_vector({str(M)}-1 downto 0) := (others => \'0\')\n')
 		f.write(f'\t\t);\n')
 		f.write(f'\tend entity {interlocking};\n')
 	
@@ -1941,40 +1942,41 @@ class ACG():
 		f.write(f'\t\t\tN_TRACKCIRCUITS : natural := {str(n_netElements)}\n')
 		f.write(f'\t\t);\n')
 		f.write(f'\t\tport(\n')
-		f.write(f'\t\t\tclock : in std_logic;\n')
+		f.write(f'\t\t\tclock : in std_logic := \'0\';\n')
 		
-		f.write(f'\t\t\tpacket :  in std_logic_vector(N-1 downto 0);\n')
+		f.write(f'\t\t\tpacket : in std_logic_vector(N-1 downto 0) := (others => \'0\');\n')
 		
-		f.write(f'\t\t\tocupation :  out std_logic_vector(N_TRACKCIRCUITS-1 downto 0);\n')
-		f.write(f'\t\t\tsignals :  out signals_type;\n')
+		f.write(f'\t\t\tocupation : out std_logic_vector(N_TRACKCIRCUITS-1 downto 0) := (others => \'0\');\n')
+		f.write(f'\t\t\tsignals : out signals_type := (msb => (others => \'0\'), lsb => (others => \'0\'));\n')
 		if n_routes > 1:
-			f.write(f'\t\t\troutes : out std_logic_vector(N_ROUTES-1 downto 0);\n')		
+			f.write(f'\t\t\troutes : out std_logic_vector(N_ROUTES-1 downto 0) := (others => \'0\');\n')		
 		if n_routes == 1:
-			f.write(f'\t\t\troutes : out std_logic;\n')
+			f.write(f'\t\t\troutes : out std_logic := \'0\';\n')
 		if n_levelCrossings > 1:
-			f.write(f'\t\t\tlevelCrossings : out std_logic_vector(N_LEVELCROSSINGS-1 downto 0);\n')
+			f.write(f'\t\t\tlevelCrossings : out std_logic_vector(N_LEVELCROSSINGS-1 downto 0) := (others => \'0\');\n')
 		if n_levelCrossings == 1:
-			f.write(f'\t\t\tlevelCrossings : out std_logic;\n')
+			f.write(f'\t\t\tlevelCrossings : out std_logic := \'0\';\n')
 		if n_switches > 1:
-			f.write(f'\t\t\tsingleSwitches : out std_logic_vector(N_SINGLESWITCHES-1 downto 0);\n')  
+			f.write(f'\t\t\tsingleSwitches : out std_logic_vector(N_SINGLESWITCHES-1 downto 0) := (others => \'0\');\n')  
 		if n_switches == 1:
-			f.write(f'\t\t\tsingleSwitches : out std_logic;\n')  
+			f.write(f'\t\t\tsingleSwitches : out std_logic := \'0\';\n')  
 		if n_scissorCrossings > 1:
-			f.write(f'\t\t\tscissorCrossings : out std_logic_vector(N_SCRISSORCROSSINGS-1 downto 0);\n')  
+			f.write(f'\t\t\tscissorCrossings : out std_logic_vector(N_SCRISSORCROSSINGS-1 downto 0) := (others => \'0\');\n')  
 		if n_scissorCrossings == 1:
-			f.write(f'\t\t\tscissorCrossings : out std_logic;\n')
+			f.write(f'\t\t\tscissorCrossings : out std_logic := \'0\';\n')
 		if n_doubleSwitch > 1:
-			f.write(f'\t\t\tdoubleSwitches : out dSwitches_type;\n') 
+			f.write(f'\t\t\tdoubleSwitches : out dSwitches_type;\n') # TODO
 		if n_doubleSwitch == 1:
-			f.write(f'\t\t\tdoubleSwitches : out dSwitch_type;\n')
+			f.write(f'\t\t\tdoubleSwitches : out dSwitch_type;\n') # TODO
 
-		f.write(f'\t\t\tprocessing :  in std_logic;\n')
-		f.write(f'\t\t\tprocessed :  out std_logic\n')
+		f.write(f'\t\t\tprocessing :  in std_logic := \'0\';\n')
+		f.write(f'\t\t\tprocessed :  out std_logic := \'0\'\n')
 		f.write(f'\t\t);\n')
 		f.write(f'\tend entity {splitter};\r\n')
 	
 		f.write(f'architecture Behavioral of {splitter} is\r\n') 
-			
+		
+		'''
 		f.write(f'\tSignal tc_s : std_logic_vector({str(n_netElements)}-1 downto 0) := (others => \'0\');\n')    
 		f.write(f'\tSignal sig_s_i,sig_s_o : signals_type := (msb => (others => \'0\'), lsb => (others => \'0\'));\n')
 		if n_routes > 1:
@@ -1997,6 +1999,7 @@ class ACG():
 			f.write(f'\tSignal dsw_s_i,dsw_s_o : dSwitches_type := (msb => (others => \'0\'), lsb => (others => \'0\'));\n')
 		if n_doubleSwitch == 1:
 			f.write(f'\tSignal dsw_s_i,dsw_s_o : dSwitch_type := (msb => (others => \'0\'), lsb => (others => \'0\'));\n')
+		'''
 		f.write(f'begin\r\n')  
 		
 		# Ocupation | Routes | signals | levelCrossings | singleSwitches | doubleSwitches | scissorCrossinges
@@ -2090,32 +2093,32 @@ class ACG():
 		f.write(f'\t\t\tN_TRACKCIRCUITS : natural := {str(n_netElements)}\n')    
 		f.write(f'\t\t);\n')
 		f.write(f'\t\tport(\n')
-		f.write(f'\t\t\tclock : in std_logic;\n')
-		f.write(f'\t\t\tprocessing : in std_logic;\n')
-		f.write(f'\t\t\tprocessed : out std_logic;\n')
-		f.write(f'\t\t\tsignals : in signals_type;\n')
+		f.write(f'\t\t\tclock : in std_logic := \'0\';\n')
+		f.write(f'\t\t\tprocessing : in std_logic := \'0\';\n')
+		f.write(f'\t\t\tprocessed : out std_logic := \'0\';\n')
+		f.write(f'\t\t\tsignals : in signals_type := (msb => (others => \'0\'), lsb => (others => \'0\'));\n')
 		if n_routes > 1:
-			f.write(f'\t\t\troutes : in std_logic_vector(N_ROUTES-1 downto 0);\n')
+			f.write(f'\t\t\troutes : in std_logic_vector(N_ROUTES-1 downto 0) := (others => \'0\');\n')
 		if n_routes == 1:
-			f.write(f'\t\t\troutes : in std_logic;\n')
+			f.write(f'\t\t\troutes : in std_logic := \'0\';\n')
 		if n_levelCrossings > 1:
-			f.write(f'\t\t\tlevelCrossings : in std_logic_vector(N_LEVELCROSSINGS-1 downto 0);\n')
+			f.write(f'\t\t\tlevelCrossings : in std_logic_vector(N_LEVELCROSSINGS-1 downto 0) := (others => \'0\');\n')
 		if n_levelCrossings == 1:
-			f.write(f'\t\t\tlevelCrossings : in std_logic;\n')
+			f.write(f'\t\t\tlevelCrossings : in std_logic := \'0\';\n')
 		if n_switches > 1:
-			f.write(f'\t\t\tsingleSwitches : in std_logic_vector(N_SINGLESWITCHES-1 downto 0);\n')
+			f.write(f'\t\t\tsingleSwitches : in std_logic_vector(N_SINGLESWITCHES-1 downto 0) := (others => \'0\');\n')
 		if n_switches == 1:
-			f.write(f'\t\t\tsingleSwitches : in std_logic;\n')
+			f.write(f'\t\t\tsingleSwitches : in std_logic := \'0\';\n')
 		if n_scissorCrossings > 1:
-			f.write(f'\t\t\tscissorCrossings : in std_logic_vector(N_SCISSORCROSSINGS-1 downto 0);\n')
+			f.write(f'\t\t\tscissorCrossings : in std_logic_vector(N_SCISSORCROSSINGS-1 downto 0) := (others => \'0\');\n')
 		if n_scissorCrossings == 1:
-			f.write(f'\t\t\tscissorCrossings : in std_logic;\n')
+			f.write(f'\t\t\tscissorCrossings : in std_logic := \'0\';\n')
 		if n_doubleSwitch > 1:
-			f.write(f'\t\t\tdoubleSwitches : in dSwitches_type;\n')
+			f.write(f'\t\t\tdoubleSwitches : in dSwitches_type;\n') # TODO
 		if n_doubleSwitch == 1:
-			f.write(f'\t\t\tdoubleSwitches : in dSwitch_type;\n')
+			f.write(f'\t\t\tdoubleSwitches : in dSwitch_type;\n') # TODO
 
-		f.write(f'\t\t\toutput : out std_logic_vector({str(M)}-1 downto 0)\n')
+		f.write(f'\t\t\toutput : out std_logic_vector({str(M)}-1 downto 0) := (others => \'0\')\n')
 		f.write(f'\t\t);\n')
 		f.write(f'\tend entity {mediator};\r\n') 
 	
@@ -2216,32 +2219,32 @@ class ACG():
 		f.write(f'\t\t\tN_TRACKCIRCUITS : natural := {str(n_netElements)}\n')
 		f.write(f'\t\t);\n')
 		f.write(f'\t\tport(\n')
-		f.write(f'\t\t\tclock : in std_logic;\n')
+		f.write(f'\t\t\tclock : in std_logic := \'0\';\n')
 		
 		f.write(f'\t\t\tocupation : in std_logic_vector(N_TRACKCIRCUITS-1 downto 0);\n') 
-		f.write(f'\t\t\tsignals_i : in signals_type;\n')
-		f.write(f'\t\t\tsignals_o : out signals_type;\n')
+		f.write(f'\t\t\tsignals_i : in signals_type := (msb => (others => \'0\'), lsb => (others => \'0\'));\n')
+		f.write(f'\t\t\tsignals_o : out signals_type := (msb => (others => \'0\'), lsb => (others => \'0\'));\n')
 		if n_routes > 0:
 			f.write(f'\t\t\troutes_i : in std_logic{"_vector(N_ROUTES-1 downto 0)" if n_routes > 1 else ""} := (others => \'0\');\n')
 			f.write(f'\t\t\troutes_o : out std_logic{"_vector(N_ROUTES-1 downto 0)" if n_routes > 1 else ""} := (others => \'0\');\n')
 		if n_levelCrossings > 0:
-			f.write(f'\t\t\tlevelCrossings_i : in std_logic{"_vector(N_LEVELCROSSINGS-1 downto 0)" if n_levelCrossings > 1 else ""};\n')
-			f.write(f'\t\t\tlevelCrossings_o : out std_logic{"_vector(N_LEVELCROSSINGS-1 downto 0)" if n_levelCrossings > 1 else ""};\n')
+			f.write(f'\t\t\tlevelCrossings_i : in std_logic{"_vector(N_LEVELCROSSINGS-1 downto 0)" if n_levelCrossings > 1 else ""} := (others => \'0\');\n')
+			f.write(f'\t\t\tlevelCrossings_o : out std_logic{"_vector(N_LEVELCROSSINGS-1 downto 0)" if n_levelCrossings > 1 else ""} := (others => \'0\');\n')
 		if n_switches > 0:
-			f.write(f'\t\t\tsingleSwitches_i : in std_logic{"_vector(N_SINGLESWITCHES-1 downto 0)" if n_switches > 1 else ""};\n')
-			f.write(f'\t\t\tsingleSwitches_o : out std_logic{"_vector(N_SINGLESWITCHES-1 downto 0)" if n_switches > 1 else ""};\n')
+			f.write(f'\t\t\tsingleSwitches_i : in std_logic{"_vector(N_SINGLESWITCHES-1 downto 0)" if n_switches > 1 else ""} := (others => \'0\');\n')
+			f.write(f'\t\t\tsingleSwitches_o : out std_logic{"_vector(N_SINGLESWITCHES-1 downto 0)" if n_switches > 1 else ""} := (others => \'0\');\n')
 		if n_scissorCrossings > 0:
-			f.write(f'\t\t\tscissorCrossings_i : in std_logic{"_vector(N_SCISSORCROSSINGS-1 downto 0)" if n_scissorCrossings > 1 else ""};\n')
-			f.write(f'\t\t\tscissorCrossings_o : out std_logic{"_vector(N_SCISSORCROSSINGS-1 downto 0)" if n_scissorCrossings > 1 else ""};\n')
+			f.write(f'\t\t\tscissorCrossings_i : in std_logic{"_vector(N_SCISSORCROSSINGS-1 downto 0)" if n_scissorCrossings > 1 else ""} := (others => \'0\');\n')
+			f.write(f'\t\t\tscissorCrossings_o : out std_logic{"_vector(N_SCISSORCROSSINGS-1 downto 0)" if n_scissorCrossings > 1 else ""} := (others => \'0\');\n')
 		if n_doubleSwitch > 1:
 			f.write(f'\t\t\tdoubleSwitches_i : in dSwitches_type;\n')  
 			f.write(f'\t\t\tdoubleSwitches_o : out dSwitches_type;\n')
 		if n_doubleSwitch == 1:
-			f.write(f'\t\t\tdoubleSwitches_i : in dSwitch_type;\n')  
-			f.write(f'\t\t\tdoubleSwitches_o : out dSwitch_type;\n')
+			f.write(f'\t\t\tdoubleSwitches_i : in dSwitch_type := (msb => (others => \'0\'), lsb => (others => \'0\'));\n')  
+			f.write(f'\t\t\tdoubleSwitches_o : out dSwitch_type := (msb => (others => \'0\'), lsb => (others => \'0\'));\n')
 
-		f.write(f'\t\t\tprocessing : in std_logic;\n')
-		f.write(f'\t\t\tprocessed : out std_logic\n')	
+		f.write(f'\t\t\tprocessing : in std_logic := \'0\';\n')
+		f.write(f'\t\t\tprocessed : out std_logic := \'0\'\n')	
 	
 		f.write(f'\t\t);\n')
 		f.write(f'\tend entity {network};\r\n')
@@ -2756,22 +2759,22 @@ class ACG():
 		levelCrossing = f'levelCrossing_{index}'
 		f.write(f'\t{mode} {levelCrossing} is\n')
 		f.write(f'\t\tport(\n')
-		f.write(f'\t\t\tclock : in std_logic;\n')
+		f.write(f'\t\t\tclock : in std_logic := \'0\';\n')
 
 		for neighbour in data['Neighbour']:
-			f.write(f'\t\t\tocupation_{neighbour} : in std_logic;\n')
+			f.write(f'\t\t\tocupation_{neighbour} : in std_logic := \'1\';\n')
 
 		ocupation = " and ".join([f'ocupation_{i}' for i in data['Neighbour']])
 		
 		commands = []
 		for routes in data['Routes']:
-			f.write(f'\t\t\t{routes}_command : in routeCommands;\r\n')
+			f.write(f'\t\t\t{routes}_command : in routeCommands := RELEASE;\r\n')
 			commands.append(routes)
 
-		f.write(f'\t\t\tindication : in std_logic;\n')
-		f.write(f'\t\t\tcommand : out std_logic;\n')
-		f.write(f'\t\t\tcorrespondence_{name} : out levelCrossingStates;\n')
-		f.write(f'\t\t\tlock_{name} : out objectLock\n')
+		f.write(f'\t\t\tindication : in std_logic := \'0\';\n')
+		f.write(f'\t\t\tcommand : out std_logic := \'0\';\n')
+		f.write(f'\t\t\tcorrespondence_{name} : out levelCrossingStates := DOWN;\n')
+		f.write(f'\t\t\tlock_{name} : out objectLock := RELEASED\n')
 		f.write(f'\t\t);\n')
 		f.write(f'\tend {mode} {levelCrossing};\n')
 
@@ -2914,23 +2917,23 @@ class ACG():
 		singleSwitch = f'singleSwitch_{index}'
 		f.write(f'\t{mode} {singleSwitch} is\n')
 		f.write(f'\t\tport(\n')
-		f.write(f'\t\t\tclock : in std_logic;\n')
+		f.write(f'\t\t\tclock : in std_logic := \'0\';\n')
 
 		commands = []
 		commands_N = []
 		commands_R = []
 		for element in range(len(data['Routes'])):
-			f.write(f'\t\t\t{data['Routes'][element]}_command : in routeCommands;\n')
+			f.write(f'\t\t\t{data['Routes'][element]}_command : in routeCommands := RELEASE;\n')
 			commands.append(data['Routes'][element])
 			if data['Position'][element] == 'N':
 				commands_N.append(data['Routes'][element])
 			else:
 				commands_R.append(data['Routes'][element])	
 
-		f.write(f'\t\t\tindication : in std_logic;\n')
-		f.write(f'\t\t\tcommand : out std_logic;\n')
-		f.write(f'\t\t\tcorrespondence_{name} : out singleSwitchStates;\n')
-		f.write(f'\t\t\tlock_{name} : out objectLock\n')
+		f.write(f'\t\t\tindication : in std_logic := \'0\';\n')
+		f.write(f'\t\t\tcommand : out std_logic := \'0\';\n')
+		f.write(f'\t\t\tcorrespondence_{name} : out singleSwitchStates := NORMAL;\n')
+		f.write(f'\t\t\tlock_{name} : out objectLock := RELEASED\n')
 		f.write(f'\t\t);\n')
 		f.write(f'\tend {mode} {singleSwitch};\n')
 
@@ -3087,7 +3090,7 @@ class ACG():
 		doubleSwitch = f'doubleSwitch_{index}'
 		f.write(f'\t{mode} {doubleSwitch} is\n')
 		f.write(f'\t\tport(\n')
-		f.write(f'\t\t\tclock : in std_logic;\n')
+		f.write(f'\t\t\tclock : in std_logic := \'0\';\n')
 
 		commands = []
 		commands_NN = []
@@ -3095,7 +3098,7 @@ class ACG():
 		commands_RN = []
 		commands_NR = []
 		for element in range(len(data['Routes'])):
-			f.write(f'\t\t\t{data['Routes'][element]}_command : in routeCommands;\n')
+			f.write(f'\t\t\t{data['Routes'][element]}_command : in routeCommands := RELEASE;\n')
 			commands.append(data['Routes'][element])
 			if data['Position'][element] == 'NN':
 				commands_NN.append(data['Routes'][element])
@@ -3106,10 +3109,10 @@ class ACG():
 			if data['Position'][element] == 'NR':
 				commands_NR.append(data['Routes'][element])
 
-		f.write(f'\t\t\tindication : in dSwitch_type;\n')
-		f.write(f'\t\t\tcommand : out dSwitch_type;\n')
-		f.write(f'\t\t\tcorrespondence_{name} : out doubleSwitchStates;\n')
-		f.write(f'\t\t\tlock_{name} : out objectLock\n')
+		f.write(f'\t\t\tindication : in dSwitch_type;\n')	# TODO
+		f.write(f'\t\t\tcommand : out dSwitch_type;\n')	# TODO
+		f.write(f'\t\t\tcorrespondence_{name} : out doubleSwitchStates;\n')	# TODO
+		f.write(f'\t\t\tlock_{name} : out objectLock := RELEASED\n')
 		f.write(f'\t\t);\n')
 		f.write(f'\tend {mode} {doubleSwitch};\n')
 
@@ -3311,23 +3314,23 @@ class ACG():
 		scissorCrossing = f'scissorCrossing_{index}'
 		f.write(f'\t{mode} {scissorCrossing} is\n')
 		f.write(f'\t\tport(\n')
-		f.write(f'\t\t\tclock : in std_logic;\n')
+		f.write(f'\t\t\tclock : in std_logic := \'0\';\n')
 
 		commands = []
 		commands_N = []
 		commands_R = []
 		for element in range(len(data['Routes'])):
-			f.write(f'\t\t\t{data['Routes'][element]}_command : in routeCommands;\n')
+			f.write(f'\t\t\t{data['Routes'][element]}_command : in routeCommands := RELEASE;\n')
 			commands.append(data['Routes'][element])
 			if data['Position'][element] == 'N':
 				commands_N.append(data['Routes'][element])
 			else:
 				commands_R.append(data['Routes'][element])	
 
-		f.write(f'\t\t\tindication : in std_logic;\n')
-		f.write(f'\t\t\tcommand : out std_logic;\n')
-		f.write(f'\t\t\tcorrespondence_{name} : out scissorCrossingStates;\n')
-		f.write(f'\t\t\tlock_{name} : out objectLock\n')
+		f.write(f'\t\t\tindication : in std_logic := \'0\';\n')
+		f.write(f'\t\t\tcommand : out std_logic := \'0\';\n')
+		f.write(f'\t\t\tcorrespondence_{name} : out scissorCrossingStates;\n')	# TODO
+		f.write(f'\t\t\tlock_{name} : out objectLock := RELEASED\n')
 		f.write(f'\t\t);\n')
 		f.write(f'\tend {mode} {scissorCrossing};\n')
 
@@ -3485,12 +3488,12 @@ class ACG():
 		railwaySignal = f'railwaySignal_{index}'
 		f.write(f'\t{mode} {railwaySignal} is\n')
 		f.write(f'\t\tport(\n')
-		f.write(f'\t\t\tclock : in std_logic;\n')
+		f.write(f'\t\t\tclock : in std_logic := \'0\';\n')
 
 		commands = []
 		if 'Routes' in data[name]:
 			for element in range(len(data[name]['Routes'])):
-				f.write(f'\t\t\t{data[name]['Routes'][element]}_command : in routeCommands;\n')
+				f.write(f'\t\t\t{data[name]['Routes'][element]}_command : in routeCommands := RELEASE;\n')
 				commands.append(data[name]['Routes'][element])
 				#if data['Position'][element] == 'NN':
 				#	commands_NN.append(data['Routes'][element])
@@ -3504,23 +3507,23 @@ class ACG():
 					if i != [] and i not in lc_string:
 						lc_string.append(i) 
 		for i in lc_string:
-			f.write(f'\t\t\t{i}_state : in levelCrossingStates;\r\n')
+			f.write(f'\t\t\t{i}_state : in levelCrossingStates := DOWN;\r\n')
 
 		f.write(f'\t\t\t--Ocupation level 0\n')	
-		f.write(f'\t\t\tocupation_{ocupationLevel_0} : in std_logic;\n')	
-		f.write(f'\t\t\tcorrespondence_{signal_0} : out signalStates;\n')
-		f.write(f'\t\t\tlock_{name} : out objectLock;\n')
+		f.write(f'\t\t\tocupation_{ocupationLevel_0} : in std_logic := \'1\';\n')	
+		f.write(f'\t\t\tcorrespondence_{signal_0} : out signalStates := RED;\n')
+		f.write(f'\t\t\tlock_{name} : out objectLock := RELEASED;\n')
 
 		sw_string_1 = []
 		if len(ocupationLevel_1) > 0:
 			f.write(f'\t\t\t--Ocupation level 1\n')	
 			for i in ocupationLevel_1:
 				if i != ocupationLevel_0:
-					f.write(f'\t\t\tocupation_{i} : in std_logic;\n')	
+					f.write(f'\t\t\tocupation_{i} : in std_logic := \'1\';\n')	
 		if len(signal_1) > 0:
 			for j in signal_1:
 				if j != signal_0:
-					f.write(f'\t\t\tcorrespondence_{j} : in signalStates;\n')
+					f.write(f'\t\t\tcorrespondence_{j} : in signalStates := RED;\n')
 		if len(switches_1) > 0:
 			for k in switches_1:
 				switc_type = 'singleSwitchStates' if len(k.split('_')[1]) == 1 else ('doubleSwitchStates' if 'X' not in k.split('_')[1] else 'scissorCrossingStates')
@@ -3534,11 +3537,11 @@ class ACG():
 			f.write(f'\t\t\t--Ocupation level 2\n')	
 			for i in ocupationLevel_2:
 				if i != ocupationLevel_0 and i not in ocupationLevel_1:
-					f.write(f'\t\t\tocupation_{i} : in std_logic;\n')	
+					f.write(f'\t\t\tocupation_{i} : in std_logic := \'1\';\n')	
 		if len(signal_2) > 0:
 			for j in signal_2:
 				if j != signal_0 and j not in signal_1:
-					f.write(f'\t\t\tcorrespondence_{j} : in signalStates;\n')
+					f.write(f'\t\t\tcorrespondence_{j} : in signalStates := RED;\n')
 		if len(switches_2) > 0:
 			for k in switches_2:
 				switc_type = 'singleSwitchStates' if len(k.split('_')[1]) == 1 else ('doubleSwitchStates' if 'X' not in k.split('_')[1] else 'scissorCrossingStates')
@@ -3999,16 +4002,16 @@ class ACG():
 		f.write(f'\t{mode} {node} is\n')
 		f.write(f'\t\tport(\n')
 		#f.write(f'\t\t\tclock : in std_logic;\n')
-		f.write(f'\t\t\tocupation : in std_logic;\n')
+		f.write(f'\t\t\tocupation : in std_logic := \'1\';\n')
 		
 		commands = []
 		for route in routes:
 			if nodeId in routes[route]['Path']:
-				f.write(f'\t\t\tR{route}_command : in routeCommands;\n')	
+				f.write(f'\t\t\tR{route}_command : in routeCommands := RELEASE;\n')	
 				commands.append(f'R{route}')
 
-		f.write(f'\t\t\tstate : out nodeStates;\n')
-		f.write(f'\t\t\tlocking : out objectLock\n')
+		f.write(f'\t\t\tstate : out nodeStates := FREE;\n')
+		f.write(f'\t\t\tlocking : out objectLock := RELEASED\n')
 		f.write(f'\t\t);\n')
 		f.write(f'\tend {mode} {node};\n')
 
@@ -4083,41 +4086,41 @@ class ACG():
 		node = f'route_{index}'
 		f.write(f'\t{mode} {node} is\n')
 		f.write(f'\t\tport(\n')
-		f.write(f'\t\t\tclock : in std_logic;\n')
-		f.write(f'\t\t\trouteRequest : in std_logic;\n')
+		f.write(f'\t\t\tclock : in std_logic := \'0\';\n')
+		f.write(f'\t\t\trouteRequest : in std_logic := \'0\';\n')
 	
 		for netElement in route['Path']:
-			f.write(f'\t\t\t{netElement}_state : in nodeStates;\n')
-			f.write(f'\t\t\t{netElement}_lock : in objectLock;\n')
-			f.write(f'\t\t\t{netElement}_command : out routeCommands;\n')	
+			f.write(f'\t\t\t{netElement}_state : in nodeStates := FREE;\n')
+			f.write(f'\t\t\t{netElement}_lock : in objectLock := RELEASED;\n')
+			f.write(f'\t\t\t{netElement}_command : out routeCommands := RELEASE;\n')	
 
 		for levelCrossing in route['LevelCrossings']:
-			f.write(f'\t\t\t{levelCrossing}_state : in levelCrossingStates;\n')
-			f.write(f'\t\t\t{levelCrossing}_lock : in objectLock;\n')
-			f.write(f'\t\t\t{levelCrossing}_command : out routeCommands;\n')	
+			f.write(f'\t\t\t{levelCrossing}_state : in levelCrossingStates := DOWN;\n')
+			f.write(f'\t\t\t{levelCrossing}_lock : in objectLock := RELEASED;\n')
+			f.write(f'\t\t\t{levelCrossing}_command : out routeCommands := RELEASE;\n')	
 
 		for switches in route['Switches']:
 			switch_aux = switches.split('_')
 			if len(switch_aux[1]) == 1:
-				f.write(f'\t\t\t{"s" if switch_aux[0][0].isdigit() else ""}{switch_aux[0]}_state : in singleSwitchStates;\n')
-				f.write(f'\t\t\t{"s" if switch_aux[0][0].isdigit() else ""}{switch_aux[0]}_lock : in objectLock;\n')
-				f.write(f'\t\t\t{"s" if switch_aux[0][0].isdigit() else ""}{switch_aux[0]}_command : out routeCommands;\n')	
+				f.write(f'\t\t\t{"s" if switch_aux[0][0].isdigit() else ""}{switch_aux[0]}_state : in singleSwitchStates := NORMAL;\n')
+				f.write(f'\t\t\t{"s" if switch_aux[0][0].isdigit() else ""}{switch_aux[0]}_lock : in objectLock := RELEASED;\n')
+				f.write(f'\t\t\t{"s" if switch_aux[0][0].isdigit() else ""}{switch_aux[0]}_command : out routeCommands := RELEASE;\n')	
 			if len(switch_aux[1]) == 2:
-				f.write(f'\t\t\t{"s" if switch_aux[0][0].isdigit() else ""}{switch_aux[0]}_state : in doubleSwitchStates;\n')
-				f.write(f'\t\t\t{"s" if switch_aux[0][0].isdigit() else ""}{switch_aux[0]}_lock : in objectLock;\n')
-				f.write(f'\t\t\t{"s" if switch_aux[0][0].isdigit() else ""}{switch_aux[0]}_command : out routeCommands;\n')
+				f.write(f'\t\t\t{"s" if switch_aux[0][0].isdigit() else ""}{switch_aux[0]}_state : in doubleSwitchStates := DOUBLE_NORMAL;\n')
+				f.write(f'\t\t\t{"s" if switch_aux[0][0].isdigit() else ""}{switch_aux[0]}_lock : in objectLock := RELEASED;\n')
+				f.write(f'\t\t\t{"s" if switch_aux[0][0].isdigit() else ""}{switch_aux[0]}_command : out routeCommands := RELEASE;\n')
 
 		for scissorCrossings in route['ScissorCrossings']:
 			scissor_aux = scissorCrossings.split('_')
-			f.write(f'\t\t\t{"s" if scissor_aux[0][0].isdigit() else ""}{scissor_aux[0]}_state : in scissorCrossingStates;\n')
-			f.write(f'\t\t\t{"s" if scissor_aux[0][0].isdigit() else ""}{scissor_aux[0]}_lock : in objectLock;\n')
-			f.write(f'\t\t\t{"s" if scissor_aux[0][0].isdigit() else ""}{scissor_aux[0]}_command : out routeCommands;\n')	
+			f.write(f'\t\t\t{"s" if scissor_aux[0][0].isdigit() else ""}{scissor_aux[0]}_state : in scissorCrossingStates := NORMAL;\n')
+			f.write(f'\t\t\t{"s" if scissor_aux[0][0].isdigit() else ""}{scissor_aux[0]}_lock : in objectLock := RELEASED;\n')
+			f.write(f'\t\t\t{"s" if scissor_aux[0][0].isdigit() else ""}{scissor_aux[0]}_command : out routeCommands := RELEASE;\n')	
 
-		f.write(f'\t\t\t{route['Start']}_state : in signalStates;\n')
-		f.write(f'\t\t\t{route['Start']}_lock : in objectLock;\n')
-		f.write(f'\t\t\t{route['Start']}_command : out routeCommands;\n')	
+		f.write(f'\t\t\t{route['Start']}_state : in signalStates := RED;\n')
+		f.write(f'\t\t\t{route['Start']}_lock : in objectLock := RELEASED;\n')
+		f.write(f'\t\t\t{route['Start']}_command : out routeCommands := RELEASE;\n')	
 
-		f.write(f'\t\t\t{route['End']}_state : in signalStates;\n')
+		f.write(f'\t\t\t{route['End']}_state : in signalStates := RED;\n')
 		#f.write(f'\t\t\t{route['End']}_command : out routeCommands;\r\n')	
 
 		f.write(f'\t\t\trouteState : out std_logic := \'0\'\n')
@@ -4443,8 +4446,12 @@ class ACG():
 		f.write(f'architecture Behavioral of {printer} is\r\n') 
 
 		f.write(f'\ttype states_t is (RESTART,CYCLE_1,CYCLE_2);\n') 
-		f.write(f'\tsignal state, next_state : states_t := RESTART;\n') 
-		f.write(f'\tsignal mux_out_s,ena_s,rst_s,reg_aux : std_logic := \'0\';\n') 
+		f.write(f'\tsignal state : states_t := RESTART;\n') 
+		f.write(f'\tsignal next_state : states_t := CYCLE_1;\n') 
+
+		f.write(f'\tsignal mux_out_s,ena_s,reg_aux : std_logic := \'0\';\n') 
+		f.write(f'\tsignal rst_s : std_logic := \'1\';\n') 
+
 		f.write(f'\tsignal mux_s : std_logic_vector({str(math.ceil(np.log2(M+1)))}-1 downto 0) := (others => \'0\');\r\n')  ### TODO:
 	
 		f.write(f'begin\r\n')
@@ -4548,15 +4555,15 @@ class ACG():
 		selector = "selector"
 		f.write(f'\tentity {selector} is\n')
 		f.write(f'\t\tport(\n')
-		f.write(f'\t\t\tclock : in std_logic;\n')
-		f.write(f'\t\t\tselector : in std_logic;\n')
+		f.write(f'\t\t\tclock : in std_logic := \'0\';\n')
+		f.write(f'\t\t\tselector : in std_logic := \'0\';\n')
 		#f.write(f'\t\t\tleds : out std_logic_vector(2-1 downto 0);\n')
-		f.write(f'\t\t\twr_uart_1 : in std_logic;\n')
-		f.write(f'\t\t\twr_uart_2 : in std_logic;\n')
-		f.write(f'\t\t\twr_uart_3 : out std_logic;\n')
-		f.write(f'\t\t\tw_data_1 : in std_logic_vector(8-1 downto 0);\n')
-		f.write(f'\t\t\tw_data_2 : in std_logic_vector(8-1 downto 0);\n')
-		f.write(f'\t\t\tw_data_3 : out std_logic_vector(8-1 downto 0)\n')
+		f.write(f'\t\t\twr_uart_1 : in std_logic := \'0\';\n')
+		f.write(f'\t\t\twr_uart_2 : in std_logic := \'0\';\n')
+		f.write(f'\t\t\twr_uart_3 : out std_logic := \'0\';\n')
+		f.write(f'\t\t\tw_data_1 : in std_logic_vector(8-1 downto 0) := (others => \'0\');\n')
+		f.write(f'\t\t\tw_data_2 : in std_logic_vector(8-1 downto 0) := (others => \'0\');\n')
+		f.write(f'\t\t\tw_data_3 : out std_logic_vector(8-1 downto 0) := (others => \'0\')\n')
 		f.write(f'\t\t);\n')
 		f.write(f'\tend entity {selector};\r\n') 
 	
@@ -4601,9 +4608,9 @@ class ACG():
 		flipFlop = "flipFlop"
 		f.write(f'\tentity {flipFlop} is\n')
 		f.write(f'\t\tport(\n')
-		f.write(f'\t\t\tclock : in std_logic;\n')
-		f.write(f'\t\t\treset : in std_logic;\n')
-		f.write(f'\t\t\tQ : out std_logic\n')
+		f.write(f'\t\t\tclock : in std_logic := \'0\';\n')
+		f.write(f'\t\t\treset : in std_logic := \'0\';\n')
+		f.write(f'\t\t\tQ : out std_logic := \'0\'\n')
 		f.write(f'\t\t);\n')
 		f.write(f'\tend entity {flipFlop};\r\n') 
 	
