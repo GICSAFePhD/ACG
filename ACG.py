@@ -45,22 +45,14 @@ class ACG():
 			for SwitchIS in SwitchesIS[0].SwitchIS:
 				if (SwitchIS.Type == "ordinarySwitch"):
 
-					Net = SwitchIS.LeftBranch[0].NetRelationRef.split('_')[1].split('ne')
-					nodeLeft1 = 'ne' + Net[1]        
-					nodeLeft2 = 'ne' + Net[2]  
-					Net = SwitchIS.RightBranch[0].NetRelationRef.split('_')[1].split('ne')
-					nodeRight1 = 'ne' + Net[1]        
-					nodeRight2 = 'ne' + Net[2]  
-					
-					continueCourse = SwitchIS.ContinueCourse
-					branchCourse = SwitchIS.BranchCourse
+					main = SwitchIS.SpotLocation[0].NetElementRef
+					left = SwitchIS.LeftBranch[0].NetRelationRef.split('_')[1].replace(main,'')
+					left_radius = SwitchIS.LeftBranch[0].Radius
+					right = SwitchIS.RightBranch[0].NetRelationRef.split('_')[1].replace(main,'')
 
-					nodeStart = nodeLeft1 if (nodeLeft1 == nodeRight1 or nodeLeft1 == nodeRight2) else nodeLeft2
-					nodeLeft = nodeLeft2 if (nodeStart == nodeLeft1) else nodeLeft1
-					nodeRight = nodeRight2 if (nodeStart == nodeRight1) else nodeRight1
-
-					nodeContinue = nodeRight if continueCourse == "Right" else nodeLeft
-					nodeBranch = nodeLeft if branchCourse == "Left" else nodeRight
+					nodeStart = main
+					nodeContinue = left if left_radius == "0" else right
+					nodeBranch = right if left_radius == "0"  else left
 
 					if 'Switch' not in network[nodeStart]:
 						network[nodeStart] |= {'Switch':[]}
@@ -4759,7 +4751,7 @@ class ACG():
 		#	print('R'+str(route),routes[route])
 
 		# Enable to plot graph
-		self.create_graph(RML,network,example)
+		#self.create_graph(RML,network,example)
 
 		# Calculate N and M
 		N,M,n_netElements,n_switches,n_doubleSwitch,n_scissorCrossings,n_levelCrossings,n_signals_1,n_signals_2,n_signals_3 = self.calculate_parameters(network)
