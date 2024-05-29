@@ -2272,8 +2272,28 @@ class ACG():
 		for i in signalData:
 			ocupationLevel_0,ocupationLevel_1,ocupationLevel_2,signal_0,signal_1,signal_2,switches_1,switches_2,paths = self.getSignalGraph(i,signalData)
 			for path in paths:
-				print(f'Z {i} {paths[path]['LevelCrossings']}')
-
+				if paths[path]['LevelCrossings'] != []:
+					new_route = signalData[i]['Routes'][signalData[i]['Next'].index(paths[path]['Signals'][1])]
+					lcs = paths[path]['LevelCrossings']
+					#print(f'Z {i} {paths[path]['Signals'][1]} {lcs} {new_route}')
+					for lc in lcs:
+						if new_route not in levelCrossingData[lc]['Routes']:
+							levelCrossingData[lc]['Routes'].append(f'{new_route}')
+		print(levelCrossingData)
+			
+		for i in signalData:
+			ocupationLevel_0,ocupationLevel_1,ocupationLevel_2,signal_0,signal_1,signal_2,switches_1,switches_2,paths = self.getSignalGraph(i,signalData)
+			for path in paths:
+				if paths[path]['Switches'] != []:
+					new_route = signalData[i]['Routes'][signalData[i]['Next'].index(paths[path]['Signals'][1])]
+					sws = paths[path]['Switches']
+					#print(f'Z {i} {paths[path]['Signals'][1]} {sws} {new_route}')
+					for sw in sws:
+						switch,position = sw.split('_')
+						if new_route not in singleSwitchData[switch]['Routes']:
+							singleSwitchData[switch]['Routes'].append(f'{new_route}')
+							singleSwitchData[switch]['Position'].append(f'{position}')
+		print(singleSwitchData)
 
 		# component levelCrossing  
 		if n_levelCrossings > 0:
@@ -2316,8 +2336,8 @@ class ACG():
 			for routeId in list(routes.keys()):
 				print(f'R_{routeId} | {routes[routeId]}')
 				index = list(routes.keys()).index(routeId)
-				self.createRoute(index,routes[routeId],signalData,mode = 'component',f = f)
-				self.createRoute(index,routes[routeId],signalData,mode = 'entity',f = None, example = example)
+				self.createRoute(index,routes[routeId],levelCrossingData,singleSwitchData,mode = 'component',f = f)
+				self.createRoute(index,routes[routeId],levelCrossingData,singleSwitchData,mode = 'entity',f = None, example = example)
 
 		# intersignals
 		if n_levelCrossings > 0:
@@ -2353,40 +2373,12 @@ class ACG():
 			f.write(f'\tsignal {netElements} : objectLock;\n')
 			commands = " , ".join([f'cmd_R{i}_{j}' for i in routes for j in routes[i]['Path']])
 			f.write(f'\tsignal {commands} : routeCommands;\n')
-
-		commands = []
-
-		for routeId in list(routes.keys()):
-			index = list(routes.keys()).index(routeId)
-
-			ocupationLevel_0,ocupationLevel_1,ocupationLevel_2,signal_0,signal_1,signal_2,switches_1,switches_2,paths = self.getSignalGraph(routes[routeId]['Start'],signalData)
-			sw_list = []
-			lc_list = []
-
-			for path in paths:
-				if paths[path]['Signals'][1] == routes[routeId]['End']:
-					if 'Switches' in paths[path]:
-						sw_list.append([f'{"s" if x[0].isdigit() else ""}{x.split('_')[0]}' for x in paths[path]['Switches']])
-
-			for path in paths:
-				if 'LevelCrossings' in paths[path] and paths[path]['LevelCrossings'] != []:
-					lc_list.append(" and ".join(f'{"s" if x[0].isdigit() else ""}{x}' for x in paths[path]['LevelCrossings'] if x != None))
-				else:
-					lc_list.append(None)
-
-			for levelCrossingId in lc_list:
-				if levelCrossingId != None:
-					commands.append(f'cmd_R{routeId}_{levelCrossingId}')
-					#f.write(f'\tsignal cmd_R{routeId}_{levelCrossingId} : routeCommands;\n')
-
-			for singleSwitchId in sw_list[0]:
-				if singleSwitchId != None:
-					commands.append(f'cmd_R{routeId}_{singleSwitchId}')
-					#f.write(f'\tsignal cmd_R{routeId}_{singleSwitchId} : routeCommands;\n')
-
-		#for cmd in commands:
-		f.write(f'\tsignal {",".join(cmd for cmd in commands)} : routeCommands;\n')
-
+		if n_levelCrossings > 0:
+			commands = " , ".join([f'cmd_{rt}_{lc}' for lc in levelCrossingData for rt in levelCrossingData[lc]['Routes']])
+			f.write(f'\tsignal {commands} : routeCommands := RELEASE;\n')
+		if n_switches+n_doubleSwitch > 0: 
+			commands = " , ".join([f'cmd_{rt}_{sw}' for sw in singleSwitchData for rt in singleSwitchData[sw]['Routes']])
+			f.write(f'\tsignal {commands} : routeCommands := RELEASE;\n')
 		if n_scissorCrossings > 0:
 			commands = " , ".join([f'cmd_R{i}_{j.split('_')[0]}' for i in routes for j in routes[i]['ScissorCrossings']])
 			f.write(f'\tsignal {commands} : routeCommands;\n')
@@ -2559,20 +2551,8 @@ class ACG():
 		for routeId in list(routes.keys()):
 			index = list(routes.keys()).index(routeId)
 
-			ocupationLevel_0,ocupationLevel_1,ocupationLevel_2,signal_0,signal_1,signal_2,switches_1,switches_2,paths = self.getSignalGraph(routes[routeId]['Start'],signalData)
-			sw_list = []
-			lc_list = []
-
-			for path in paths:
-				if paths[path]['Signals'][1] == routes[routeId]['End']:
-					if 'Switches' in paths[path]:
-						sw_list.append([f'{"s" if x[0].isdigit() else ""}{x.split('_')[0]}' for x in paths[path]['Switches']])
-
-			for path in paths:
-				if 'LevelCrossings' in paths[path] and paths[path]['LevelCrossings'] != []:
-					lc_list.append(" and ".join(f'{"s" if x[0].isdigit() else ""}{x}' for x in paths[path]['LevelCrossings'] if x != None))
-				else:
-					lc_list.append(None)
+			lc_list = [key for key, value in levelCrossingData.items() if f'R{routeId}' in value['Routes']]
+			sw_list = [key for key, value in singleSwitchData.items() if f'R{routeId}' in value['Routes']]
 			
 
 			f.write(f'\troute_R{routeId} : route_{index} port map(')
@@ -2605,7 +2585,7 @@ class ACG():
 			'''	
 
 			
-			for singleSwitchId in sw_list[0]:
+			for singleSwitchId in sw_list:
 				if singleSwitchId != None:
 					f.write(f'{"s" if singleSwitchId[0].isdigit() else ""}{singleSwitchId.split('_')[0]}_command => cmd_R{routeId}_{singleSwitchId.split('_')[0]}, ')	
 					f.write(f'{"s" if singleSwitchId[0].isdigit() else ""}{singleSwitchId.split('_')[0]}_state => state_{singleSwitchId.split('_')[0]}, ')
@@ -2850,21 +2830,6 @@ class ACG():
 			
 			# Include library
 			self.includeLibrary(f,True)
-
-
-
-		#ocupationLevel_0,ocupationLevel_1,ocupationLevel_2,signal_0,signal_1,signal_2,switches_1,switches_2,aux_paths = self.getSignalGraph(route['Start'],signalData)
-
-		'''
-		lc_list = []
-		for path in paths:
-			if 'LevelCrossings' in paths[path] and paths[path]['LevelCrossings'] != []:
-				lc_list.append(" and ".join(f'{"s" if x[0].isdigit() else ""}{x}' for x in paths[path]['LevelCrossings'] if x != None))
-		else:
-			lc_list.append(None)
-		'''
-
-
 
 		levelCrossing = f'levelCrossing_{index}'
 		f.write(f'\t{mode} {levelCrossing} is\n')
@@ -4190,7 +4155,7 @@ class ACG():
 			f.write(f'end Behavioral;') 
 			f.close()  # Close header file
 
-	def createRoute(self,index,route,signalData,mode, f = None,example = 1):
+	def createRoute(self,index,route,levelCrossingData,singleSwitchData,mode, f = None,example = 1):
 		if mode == 'entity':
 			node = f'route_{index}'
 			f = open(f'App/Layouts/Example_{example}/VHDL/{node}.vhd',"w+")
@@ -4201,31 +4166,12 @@ class ACG():
 			# Include library
 			self.includeLibrary(f,True)
 		
-		ocupationLevel_0,ocupationLevel_1,ocupationLevel_2,signal_0,signal_1,signal_2,switches_1,switches_2,paths = self.getSignalGraph(route['Start'],signalData)
+		
+		lc_list = [key for key, value in levelCrossingData.items() if f'R{index+1}' in value['Routes']]
+		sw_list = [key for key, value in singleSwitchData.items() if f'R{index+1}' in value['Routes']]
 
-		sw_state_condition = []
-		sw_list = []
-
-		lc_state_condition = []
-		lc_list = []
-
-		sw_dict = {'N':'NORMAL','R':'REVERSE','NN':'DOUBLE_NORMAL','RR':'DOUBLE_REVERSE','RN':'REVERSE_NORMAL','NR':'NORMAL_REVERSE','XN':'NORMAL','XR':'REVERSE'}
-		for path in paths:
-			if paths[path]['Signals'][1] == route['End']:
-				if 'Switches' in paths[path]:
-					sw_state_condition.append([f'{"s" if x[0].isdigit() else ""}{x.split('_')[0]}_state = {sw_dict[x.split('_')[1]]}' for x in paths[path]['Switches']])
-					sw_list.append([f'{"s" if x[0].isdigit() else ""}{x.split('_')[0]}' for x in paths[path]['Switches']])
-
-		for path in paths:
-			if 'LevelCrossings' in paths[path] and paths[path]['LevelCrossings'] != []:
-				lc_state_condition.append(" and ".join(f'{"s" if x[0].isdigit() else ""}{x}_state = DOWN' for x in paths[path]['LevelCrossings'] if x != None))
-				lc_list.append(" and ".join(f'{"s" if x[0].isdigit() else ""}{x}' for x in paths[path]['LevelCrossings'] if x != None))
-			else:
-				lc_state_condition.append(None)
-				lc_list.append(None)
-
-		f.write(f'--XXX {sw_state_condition[0]} | {sw_list[0]} \r\n')			
-		f.write(f'--YYY {lc_state_condition[0]} | {lc_list[0]} \r\n')	
+		f.write(f'--XXX  R{index+1} {sw_list} \r\n')	
+		f.write(f'--YYY  R{index+1} {lc_list} \r\n')	
 
 		node = f'route_{index}'
 		f.write(f'\t{mode} {node} is\n')
@@ -4245,7 +4191,7 @@ class ACG():
 				f.write(f'\t\t\t{levelCrossing}_lock : in objectLock;\n')
 				f.write(f'\t\t\t{levelCrossing}_command : out routeCommands;\n')
 
-		for switch in sw_list[0]:
+		for switch in sw_list:
 			if switch != None:
 				f.write(f'\t\t\t{switch}_state : in singleSwitchStates;\n')
 				f.write(f'\t\t\t{switch}_lock : in objectLock;\n')
@@ -4384,7 +4330,7 @@ class ACG():
 			for levelCrossing in lc_list:
 				if levelCrossing != None:
 					infraestructure.append(levelCrossing)
-			for switch in sw_list[0]:
+			for switch in sw_list:
 				if switch != None:			
 					infraestructure.append(switch)
 			
@@ -4421,7 +4367,7 @@ class ACG():
 			for levelCrossing in lc_list:
 				if levelCrossing != None:
 					infraestructure.append(levelCrossing)
-			for switch in sw_list[0]:
+			for switch in sw_list:
 				if switch != None:			
 					infraestructure.append(switch)
 			
@@ -4501,7 +4447,7 @@ class ACG():
 			for levelCrossing in lc_list:
 				if levelCrossing != None:
 					f.write(f'\t\t\t\t{levelCrossing}_command <= RELEASE;\n')
-			for switch in sw_list[0]:
+			for switch in sw_list:
 				if switch != None:
 					f.write(f'\t\t\t\t{switch}_command <= RELEASE;\n')
 	
