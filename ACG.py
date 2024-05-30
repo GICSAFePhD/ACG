@@ -4377,9 +4377,7 @@ class ACG():
 				f.write(f'\t\t\t\tif ({generalRelease}) then\n')
 				f.write(f'\t\t\t\t\trestart <= \'0\';\n')
 				for i in infraestructure:
-					f.write(f'\t\t\t\t\t{i}_command <= LOCK;\n')
-				f.write(f'\t\t\t\t\trouteState <= \'0\';\n')
-				
+					f.write(f'\t\t\t\t\t{i}_command <= LOCK;\n')				
 				f.write(f'\t\t\t\tend if;\n')
 
 			generalLock = " and ".join(f'{s}_lock = LOCKED' for s in infraestructure if s)
@@ -4393,7 +4391,7 @@ class ACG():
 				f.write(f'\t\t\t\troutingState <= DRIVING_SIGNAL;\n')
 
 			f.write(f'\r\t\t\twhen DRIVING_SIGNAL =>\n')
-
+			f.write(f'\t\t\t\trestart <= \'1\';\n')
 			'''
 			f.write(f'\t\t\t\tif (reset = \'1\' or ({timeout_stop})) then\n')
 			f.write(f'\t\t\t\t\trestart <= \'1\';\n')
@@ -4401,7 +4399,7 @@ class ACG():
 			f.write(f'\t\t\t\t\troutingState <= RELEASING_INFRASTRUCTURE;\n')
 			f.write(f'\t\t\t\tend if;\n')
 			'''
-
+			'''
 			f.write(f'\t\t\t\tif ({route['Start']}_lock = RELEASED) then\n')
 			f.write(f'\t\t\t\t\t{route['Start']}_command <= RESERVE;\n')
 			f.write(f'\t\t\t\tend if;\n')
@@ -4411,11 +4409,16 @@ class ACG():
 			f.write(f'\t\t\t\t\trestart <= \'0\';\n')
 			#f.write(f'\t\t\t\t\trouteState <= \'1\';\n')
 			f.write(f'\t\t\t\t\t{route['Start']}_command <= LOCK;\n')
+			
 			f.write(f'\t\t\t\t\troutingState <= SEQUENTIAL_RELEASE;\n')
 			f.write(f'\t\t\t\tend if;\n')
+			'''
+			#f.write(f'\t\t\t\trouteState <= \'0\';\n')
+			f.write(f'\t\t\t\troutingState <= SEQUENTIAL_RELEASE;\n')
 
 			f.write(f'\r\t\t\twhen SEQUENTIAL_RELEASE =>\n')
-
+			
+			f.write(f'\t\t\t\trouteState <= \'0\';\n')
 			'''
 			f.write(f'\t\t\t\tif (reset = \'1\' or ({timeout_stop})) then\n')
 			f.write(f'\t\t\t\t\trestart <= \'1\';\n')
@@ -4426,13 +4429,15 @@ class ACG():
 			f.write(f'\t\t\t\tend if;\n')
 			'''
 
-			f.write(f'\t\t\t\t--- Sequential release\n')
-
+			#f.write(f'\t\t\t\t--- Sequential release\n')
+			'''
 			for net in route['Path']:
 				f.write(f'\t\t\t\tif ({net}_used = \'0\' and {net}_state = OCCUPIED) then \n')
 				f.write(f'\t\t\t\t\t{net}_used <= \'1\';\n')
+				f.write(f'\t\t\t\t\trouteState <= \'0\';\n')
 				if net == route['Path'][-1]:
 					f.write(f'\t\t\t\t\t--- Finish -> Release all\n')
+					
 					f.write(f'\t\t\t\t\troutingState <= RELEASING_INFRASTRUCTURE;\n')
 				f.write(f'\t\t\t\tend if;\n')
 
@@ -4441,6 +4446,18 @@ class ACG():
 					f.write(f'\t\t\t\t\t{net}_used <= \'0\';\n')
 					f.write(f'\t\t\t\t\t{net}_command <= RELEASE;\n')
 					f.write(f'\t\t\t\tend if;\n')
+			'''
+			'''
+			f.write(f'\t\t\t\tif ({net}_state = FREE ) then\n')
+			f.write(f'\t\t\t\t\trouteState <= \'1\';\n')
+			f.write(f'\t\t\t\tend if;\n')
+			f.write(f'\t\t\t\tif ({net}_state = OCCUPIED ) then\n')
+			f.write(f'\t\t\t\t\trouteState <= \'0\';\n')
+			f.write(f'\t\t\t\t\troutingState <= RELEASING_INFRASTRUCTURE;\n')
+			f.write(f'\t\t\t\tend if;\n')
+			'''
+			f.write(f'\t\t\t\troutingState <= RELEASING_INFRASTRUCTURE;\n')
+			
 
 			f.write(f'\r\t\t\twhen RELEASING_INFRASTRUCTURE =>\n')
 
