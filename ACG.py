@@ -2280,19 +2280,25 @@ class ACG():
 						if new_route not in levelCrossingData[lc]['Routes']:
 							levelCrossingData[lc]['Routes'].append(f'{new_route}')
 		print(levelCrossingData)
-			
+		
 		for i in signalData:
+			signal = ""
 			ocupationLevel_0,ocupationLevel_1,ocupationLevel_2,signal_0,signal_1,signal_2,switches_1,switches_2,paths = self.getSignalGraph(i,signalData)
 			for path in paths:
+				#sws = []
 				if paths[path]['Switches'] != []:
 					new_route = signalData[i]['Routes'][signalData[i]['Next'].index(paths[path]['Signals'][1])]
+					#if sws == []:
 					sws = paths[path]['Switches']
-					#print(f'Z {i} {paths[path]['Signals'][1]} {sws} {new_route}')
-					for sw in sws:
-						switch,position = sw.split('_')
-						if new_route not in singleSwitchData[switch]['Routes']:
-							singleSwitchData[switch]['Routes'].append(f'{new_route}')
-							singleSwitchData[switch]['Position'].append(f'{position}')
+					if signal != paths[path]['Signals'][1]:
+						signal = paths[path]['Signals'][1]
+						print(f'Z {i} {signal} {sws} {new_route}')
+
+						for sw in sws:
+							switch,position = sw.split('_')
+							if new_route not in singleSwitchData[switch]['Routes']:
+								singleSwitchData[switch]['Routes'].append(f'{new_route}')
+								singleSwitchData[switch]['Position'].append(f'{position}')
 		print(singleSwitchData)
 
 		# component levelCrossing  
