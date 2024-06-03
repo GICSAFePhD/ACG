@@ -2841,20 +2841,22 @@ class ACG():
 		levelCrossing = f'levelCrossing_{index}'
 		f.write(f'\t{mode} {levelCrossing} is\n')
 		f.write(f'\t\tport(\n')
-		f.write(f'\t\t\tclock : in std_logic;\n')
-		f.write(f'\t\t\treset : in std_logic;\n')
+		f.write(f'\t\t\tclock : in std_logic := \'0\';\n')
+		f.write(f'\t\t\treset : in std_logic := \'0\';\n')
 
 		for neighbour in data['Neighbour']:
-			f.write(f'\t\t\tocupation_{neighbour} : in std_logic;\n')
+			f.write(f'\t\t\tocupation_{neighbour} : in std_logic := \'1\';\n')
 
 		ocupation = " and ".join([f'ocupation_{i}' for i in data['Neighbour']])
 		
+		track_status = ",".join([f'ocupation_{i}' for i in data['Neighbour']])
+
 		commands = []
 		for routes in data['Routes']:
-			f.write(f'\t\t\t{routes}_command : in routeCommands;\r\n')
+			f.write(f'\t\t\t{routes}_command : in routeCommands := RELEASE;\r\n')
 			commands.append(routes)
 
-		f.write(f'\t\t\tindication : in std_logic;\n')
+		f.write(f'\t\t\tindication : in std_logic := \'0\';\n')
 		f.write(f'\t\t\tcommand : out std_logic := \'0\';\n')
 		f.write(f'\t\t\tcorrespondence_{name} : out levelCrossingStates := UP;\n')
 		f.write(f'\t\t\tlock_{name} : out objectLock := RELEASED\n')
@@ -2866,7 +2868,7 @@ class ACG():
 			reserveState = " or ".join([f'{i}_command = RESERVE' for i in commands])
 			lockState = " or ".join([f'{i}_command = LOCK' for i in commands])
 
-			freq = 10e6
+			freq = 120e9
 			timeout = 7
 
 			FF = math.ceil(math.log2(timeout*freq))
@@ -2879,16 +2881,16 @@ class ACG():
 					total += t[i]
 					sequence[i] = 1
 			timeout_stop = " and ".join([f'Q({i}) = \'{sequence[i]}\'' for i in range(FF)])
-			timeout = "".join([f'{sequence[i]}' for i in range(FF)])[::-1]
+			timeout = '0'+"".join([f'{sequence[i]}' for i in range(FF)])[::-1]
 
 			f.write(f'architecture Behavioral of {node} is\r\n')
 
-			f.write(f'\tcomponent flipFlop is\n')
-			f.write(f'\t\tport(\n')
-			f.write(f'\t\t\tclock : in std_logic;\n')
-			f.write(f'\t\t\treset : in std_logic;\n')
-			f.write(f'\t\t\tQ : out std_logic\n')
-			f.write(f'\t\t);\n')
+			f.write(f'\tcomponent flipFlop is\r\n')
+			f.write(f'\t\tport(\r\n')
+			f.write(f'\t\t\tclock : in std_logic := \'0\';\r\n')
+			f.write(f'\t\t\treset : in std_logic := \'0\';\r\n')
+			f.write(f'\t\t\tQ : out std_logic := \'0\'\r\n')
+			f.write(f'\t\t);\r\n')
 			f.write(f'\tend component flipFlop;\r\n')
 
 			f.write(f'\tsignal restart : std_logic := \'0\';\n')
@@ -2896,14 +2898,16 @@ class ACG():
 			f.write(f'\tsignal commandState : routeCommands := RELEASE;\n')
 			f.write(f'\tsignal commandAux : std_logic := \'0\';\r\n')
 			f.write(f'\tsignal timeout : std_logic := \'0\';\n')
+			f.write(f'\tsignal clock_in : std_logic_vector({FF} downto 0) := (others => \'0\');\n')
+			
+			f.write(f'begin\n')
 
-			f.write(f'begin\r\n')
+			f.write(f'\tclock_in(0) <= clock;\r\n')
 
-			f.write(f'\tgen : for i in 0 to {FF-1} generate\n')
-			f.write(f'\t\tinst: flipFlop port map(Q(i),restart,Q(i+1));\n')
+			f.write(f'\tgen : for i in 0 to {FF-1} generate\r\n')
+			f.write(f'\t\t inst: flipFlop port map(clock_in(i), restart, Q(i));\r\n')
+			f.write(f'\t\tclock_in(i+1) <= Q(i);\r\n')
 			f.write(f'\tend generate;\r\n')
-
-			f.write(f'\tQ(0) <= clock;\n')
 
 			route_cmd = ",".join([f'{i}_command' for i in commands])
 
@@ -2930,25 +2934,24 @@ class ACG():
 
 			f.write(f'\tend process;\n') 
 
-			f.write(f'\n\tprocess(commandState)\n')
+			f.write(f'\n\tprocess(timeout,commandState,indication,{track_status})\n')
 			f.write(f'\tbegin\n')
 			f.write(f'\t\tcase commandState is\n')
 			f.write(f'\t\t\twhen RELEASE => -- AUTOMATIC\n')
-			f.write(f'\t\t\t\tlock_{name} <= RELEASED;\n')
 			f.write(f'\t\t\t\tcommandAux <= {ocupation} and indication;\n')
+			f.write(f'\t\t\t\tlock_{name} <= RELEASED;\n')
 			f.write(f'\t\t\twhen RESERVE => -- DONT CHANGE\n')
+			f.write(f'\t\t\t\tcommandAux <= \'0\';\n')
 			f.write(f'\t\t\t\tlock_{name} <= RESERVED;\n')
-			f.write(f'\t\t\t\tcommandAux <= \'0\';\n')
 			f.write(f'\t\t\twhen LOCK => -- DONT CHANGE\n')
-			f.write(f'\t\t\t\tlock_{name} <= LOCKED;\n')
 			f.write(f'\t\t\t\tcommandAux <= \'0\';\n')
+			f.write(f'\t\t\t\tlock_{name} <= LOCKED;\n')
 			f.write(f'\t\t\twhen others =>\n')
-			f.write(f'\t\t\t\tlock_{name} <= LOCKED;\n')
 			f.write(f'\t\t\t\tcommandAux <= \'0\';\n')
+			f.write(f'\t\t\t\tlock_{name} <= LOCKED;\n')
 			f.write(f'\t\tend case;\n')
 			f.write(f'\tend process;\n') 
 
-			'''
 			f.write(f'\n\tprocess(clock,reset,Q,restart)\n')
 			f.write(f'\tbegin\n')
 			f.write(f'\t\tif (reset = \'1\' or Q = "{timeout}") then\n')
@@ -2958,20 +2961,10 @@ class ACG():
 			f.write(f'\t\t\ttimeout <= \'0\';\n')
 			f.write(f'\t\tend if;\n')
 			f.write(f'\tend process;\r\n') 
-			'''
 
 			f.write(f'\n\tprocess(timeout,commandAux,indication)\n')
 			f.write(f'\tbegin\n')
-		
-			f.write(f'\t\tif (timeout = \'1\') then\n')
-			f.write(f'\t\t\trestart <= \'1\';\n')
-			f.write(f'\t\t\tif(indication = \'0\') then\n')
-			f.write(f'\t\t\t\tcorrespondence_{name} <= DOWN;\n')
-			f.write(f'\t\t\telse\n')
-			f.write(f'\t\t\t\tcorrespondence_{name} <= UP;\n')
-			f.write(f'\t\t\tend if;\n')
-			f.write(f'\t\telse\n')
-			
+					
 			f.write(f'\t\t\tif (commandAux = \'0\' and indication = \'0\') then\n')
 			f.write(f'\t\t\t\tcorrespondence_{name} <= DOWN;\n')
 			f.write(f'\t\t\t\trestart <= \'1\';\n')
@@ -2986,7 +2979,6 @@ class ACG():
 			f.write(f'\t\t\t\tcorrespondence_{name} <= TRANSITION;\n')
 			f.write(f'\t\t\t\trestart <= \'0\';\n')
 			f.write(f'\t\t\tend if;\n')
-			f.write(f'\t\tend if;\n')
 		
 			f.write(f'\tend process;\r\n') 
 
@@ -3055,6 +3047,8 @@ class ACG():
 			timeout_stop = " and ".join([f'Q({i}) = \'{sequence[i]}\'' for i in range(FF)])
 			timeout = '0'+"".join([f'{sequence[i]}' for i in range(FF)])[::-1]
 
+			route_cmd = ",".join([f'{i}_command' for i in commands])
+
 			f.write(f'architecture Behavioral of {node} is\n')
 
 			f.write(f'\tcomponent flipFlop is\r\n')
@@ -3081,8 +3075,6 @@ class ACG():
 			f.write(f'\t\tclock_in(i+1) <= Q(i);\r\n')
 			f.write(f'\tend generate;\r\n')
 
-			route_cmd = ",".join([f'{i}_command' for i in commands])
-
 			f.write(f'\n\tprocess(timeout,{route_cmd})\r\n')
 			f.write(f'\tbegin\r\n')
 			f.write(f'\t\tif (timeout = \'1\') then\r\n')
@@ -3100,7 +3092,7 @@ class ACG():
 			f.write(f'\t\tend if;\r\n')
 			f.write(f'\tend process;\r\n') 
 
-			f.write(f'\n\tprocess(timeout,commandState)\r\n')
+			f.write(f'\n\tprocess(timeout,commandState,{route_cmd})\r\n')
 			f.write(f'\tbegin\r\n')
 			f.write(f'\t\tcase commandState is\r\n')
 			f.write(f'\t\t\twhen RELEASE => -- AUTOMATIC\r\n')
@@ -3138,7 +3130,6 @@ class ACG():
 			f.write(f'\t\tend if;\n')
 			f.write(f'\tend process;\r\n') 
 			
-			
 			f.write(f'\n\tprocess(timeout,commandAux,indication)\r\n')
 			f.write(f'\tbegin\r\n')
 			
@@ -3157,7 +3148,6 @@ class ACG():
 			f.write(f'\t\t\trestart <= \'0\';\r\n')
 			f.write(f'\t\tend if;\r\n')
 
-	
 			f.write(f'\tend process;\r\n') 
 
 			f.write(f'\tcommand <= commandAux;\r\n')
