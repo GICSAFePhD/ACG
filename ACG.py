@@ -4181,7 +4181,6 @@ class ACG():
 			# Include library
 			self.includeLibrary(f,True)
 		
-		
 		lc_list = [key for key, value in levelCrossingData.items() if f'R{index+1}' in value['Routes']]
 		sw_list = [key for key, value in singleSwitchData.items() if f'R{index+1}' in value['Routes']]
 
@@ -4191,39 +4190,39 @@ class ACG():
 		node = f'route_{index}'
 		f.write(f'\t{mode} {node} is\n')
 		f.write(f'\t\tport(\n')
-		f.write(f'\t\t\tclock : in std_logic;\n')
-		f.write(f'\t\t\treset : in std_logic;\n')
-		f.write(f'\t\t\trouteRequest : in std_logic;\n')
+		f.write(f'\t\t\tclock : in std_logic := \'0\';\n')
+		f.write(f'\t\t\treset : in std_logic := \'0\';\n')
+		f.write(f'\t\t\trouteRequest : in std_logic := \'0\';\n')
 	
 		for netElement in route['Path']:
-			f.write(f'\t\t\t{netElement}_state : in nodeStates;\n')
-			f.write(f'\t\t\t{netElement}_lock : in objectLock;\n')
-			f.write(f'\t\t\t{netElement}_command : out routeCommands;\n')	
+			f.write(f'\t\t\t{netElement}_state : in nodeStates := FREE;\n')
+			f.write(f'\t\t\t{netElement}_lock : in objectLock := RELEASED;\n')
+			f.write(f'\t\t\t{netElement}_command : out routeCommands := RELEASE;\n')	
 
 		for levelCrossing in lc_list:
 			if levelCrossing != None:
-				f.write(f'\t\t\t{levelCrossing}_state : in levelCrossingStates;\n')
-				f.write(f'\t\t\t{levelCrossing}_lock : in objectLock;\n')
+				f.write(f'\t\t\t{levelCrossing}_state : in levelCrossingStates := UP;\n')
+				f.write(f'\t\t\t{levelCrossing}_lock : in objectLock := RELEASED;\n')
 				f.write(f'\t\t\t{levelCrossing}_command : out routeCommands := RELEASE;\n')
 
 		for switch in sw_list:
 			if switch != None:
-				f.write(f'\t\t\t{switch}_state : in singleSwitchStates;\n')
-				f.write(f'\t\t\t{switch}_lock : in objectLock;\n')
+				f.write(f'\t\t\t{switch}_state : in singleSwitchStates := NORMAL;\n')
+				f.write(f'\t\t\t{switch}_lock : in objectLock := RELEASED;\n')
 				f.write(f'\t\t\t{switch}_command : out routeCommands := RELEASE;\n')
 
 		for scissorCrossings in route['ScissorCrossings']:
 			scissor_aux = scissorCrossings.split('_')
-			f.write(f'\t\t\t{"s" if scissor_aux[0][0].isdigit() else ""}{scissor_aux[0]}_state : in scissorCrossingStates;\n')
-			f.write(f'\t\t\t{"s" if scissor_aux[0][0].isdigit() else ""}{scissor_aux[0]}_lock : in objectLock;\n')
+			f.write(f'\t\t\t{"s" if scissor_aux[0][0].isdigit() else ""}{scissor_aux[0]}_state : in scissorCrossingStates := DOUBLE_NORMAL;\n')
+			f.write(f'\t\t\t{"s" if scissor_aux[0][0].isdigit() else ""}{scissor_aux[0]}_lock : in objectLock := RELEASED;\n')
 			f.write(f'\t\t\t{"s" if scissor_aux[0][0].isdigit() else ""}{scissor_aux[0]}_command : out routeCommands := RELEASE;\n')	
 
-		f.write(f'\t\t\t{route['Start']}_state : in signalStates;\n')
-		f.write(f'\t\t\t{route['Start']}_lock : in objectLock;\n')
+		f.write(f'\t\t\t{route['Start']}_state : in signalStates := RED;\n')
+		f.write(f'\t\t\t{route['Start']}_lock : in objectLock := RELEASED;\n')
 		f.write(f'\t\t\t{route['Start']}_command : out routeCommands := RELEASE;\n')	
 
-		f.write(f'\t\t\t{route['End']}_state : in signalStates;\n')
-		f.write(f'\t\t\t{route['End']}_lock : in objectLock;\n')
+		f.write(f'\t\t\t{route['End']}_state : in signalStates := RED;\n')
+		f.write(f'\t\t\t{route['End']}_lock : in objectLock := RELEASED;\n')
 		f.write(f'\t\t\t{route['End']}_command : out routeCommands := RELEASE;\n')
 
 		f.write(f'\t\t\trouteState : out std_logic := \'0\'\n')
@@ -4240,7 +4239,7 @@ class ACG():
 			reserveState = " or ".join([f'{i}_state = RESERVE' for i in route['Path']])
 			lockState = " or ".join([f'{i}_state = LOCK' for i in route['Path']])
 				
-			freq = 10e6
+			freq = 120e9
 			timeout = 7
 
 			FF = math.ceil(math.log2(timeout*freq))
@@ -4253,13 +4252,14 @@ class ACG():
 					total += t[i]
 					sequence[i] = 1
 			timeout_stop = " and ".join([f'Q({i}) = \'{sequence[i]}\'' for i in range(FF)])
+			timeout = '0'+"".join([f'{sequence[i]}' for i in range(FF)])[::-1]
 
 			f.write(f'architecture Behavioral of {node} is\n')
 			f.write(f'\tcomponent flipFlop is\n')
 			f.write(f'\t\tport(\n')
-			f.write(f'\t\t\tclock : in std_logic;\n')
-			f.write(f'\t\t\treset : in std_logic;\n')
-			f.write(f'\t\t\tQ : out std_logic\n')
+			f.write(f'\t\t\tclock : in std_logic := \'0\';\n')
+			f.write(f'\t\t\treset : in std_logic := \'0\';\n')
+			f.write(f'\t\t\tQ : out std_logic := \'0\'\n')
 			f.write(f'\t\t);\n')
 			f.write(f'\tend component flipFlop;\r\n')
 
@@ -4272,13 +4272,17 @@ class ACG():
 
 			f.write(f'\tsignal {" , ".join([f'{i}_used' for i in route['Path']])} : std_logic := \'0\';\n')
 
-			f.write(f'begin\r\n')
+			f.write(f'\tsignal timeout : std_logic := \'0\';\n')
+			f.write(f'\tsignal clock_in : std_logic_vector({FF} downto 0) := (others => \'0\');\n')
+			
+			f.write(f'begin\n')
 
-			f.write(f'\tgen : for i in 0 to {FF-1} generate\n')
-			f.write(f'\t\tinst: flipFlop port map(Q(i),restart,Q(i+1));\n')
-			f.write(f'\tend generate;\n')
-
-			f.write(f'\tQ(0) <= clock;\n')
+			f.write(f'\tclock_in(0) <= clock;\r\n')
+			
+			f.write(f'\tgen : for i in 0 to {FF-1} generate\r\n')
+			f.write(f'\t\t inst: flipFlop port map(clock_in(i), restart, Q(i));\r\n')
+			f.write(f'\t\tclock_in(i+1) <= Q(i);\r\n')
+			f.write(f'\tend generate;\r\n')
 
 			nets_state = ",".join([f'{net}_state' for net in route['Path']])
 			nets_lock = ",".join([f'{net}_lock' for net in route['Path']])
@@ -4289,13 +4293,13 @@ class ACG():
 			infra = [nets_state,nets_lock,sws_lock,lcs_lock]
 			infras = ",".join([f'{inf}' for inf in infra if inf])
 
-			f.write(f'\n\tprocess(routingState,{infras})\n')
+			f.write(f'\n\tprocess(routeRequest,routingState,{infras})\n')
 			f.write(f'\tbegin\n')
 	
 			f.write(f'\t\tcase routingState is\n')
 			f.write(f'\r\t\t\twhen WAITING_COMMAND =>\n')
 			#f.write(f'\t\t\t\trestart <= \'0\';\n')
-			f.write(f'\t\t\t\tif (routeRequest = \'1\' and routeEnabled = \'0\') then\n')
+			f.write(f'\t\t\t\tif (routeRequest\'Event and routeRequest = \'1\') then\n')
 			f.write(f'\t\t\t\t\troutingState <= RESERVING_TRACKS;\n')
 			f.write(f'\t\t\t\tend if;\n')
 
