@@ -2965,20 +2965,20 @@ class ACG():
 			f.write(f'\n\tprocess(timeout,commandAux,indication)\n')
 			f.write(f'\tbegin\n')
 					
-			f.write(f'\t\t\tif (commandAux = \'0\' and indication = \'0\') then\n')
-			f.write(f'\t\t\t\tcorrespondence_{name} <= DOWN;\n')
-			f.write(f'\t\t\t\trestart <= \'1\';\n')
-			f.write(f'\t\t\tend if;\n')
+			f.write(f'\t\tif (commandAux = \'0\' and indication = \'0\') then\n')
+			f.write(f'\t\t\tcorrespondence_{name} <= DOWN;\n')
+			f.write(f'\t\t\trestart <= \'1\';\n')
+			f.write(f'\t\tend if;\n')
 			
-			f.write(f'\t\t\tif (commandAux = \'1\' and indication = \'1\') then\n')
-			f.write(f'\t\t\t\tcorrespondence_{name} <= UP;\n')
-			f.write(f'\t\t\t\trestart <= \'1\';\n')
-			f.write(f'\t\t\tend if;\n')
+			f.write(f'\t\tif (commandAux = \'1\' and indication = \'1\') then\n')
+			f.write(f'\t\t\tcorrespondence_{name} <= UP;\n')
+			f.write(f'\t\t\trestart <= \'1\';\n')
+			f.write(f'\t\tend if;\n')
 
-			f.write(f'\t\t\tif (commandAux /= indication) then\n')
-			f.write(f'\t\t\t\tcorrespondence_{name} <= TRANSITION;\n')
-			f.write(f'\t\t\t\trestart <= \'0\';\n')
-			f.write(f'\t\t\tend if;\n')
+			f.write(f'\t\tif (commandAux /= indication) then\n')
+			f.write(f'\t\t\tcorrespondence_{name} <= TRANSITION;\n')
+			f.write(f'\t\t\trestart <= \'0\';\n')
+			f.write(f'\t\tend if;\n')
 		
 			f.write(f'\tend process;\r\n') 
 
@@ -4298,17 +4298,19 @@ class ACG():
 	
 			f.write(f'\t\tcase routingState is\n')
 			f.write(f'\r\t\t\twhen WAITING_COMMAND =>\n')
-			#f.write(f'\t\t\t\trestart <= \'0\';\n')
-			f.write(f'\t\t\t\tif (routeRequest\'Event and routeRequest = \'1\') then\n')
+			
+			f.write(f'\t\t\t\tif (routeRequest\'Event and routeRequest = \'1\' and routeEnabled = \'0\') then\n')
+			f.write(f'\t\t\t\t\trouteState <= \'1\';\n')
+			#f.write(f'\t\t\t\t\trestart <= \'1\';\n')
 			f.write(f'\t\t\t\t\troutingState <= RESERVING_TRACKS;\n')
 			f.write(f'\t\t\t\tend if;\n')
 
 			f.write(f'\r\t\t\twhen RESERVING_TRACKS =>\n')
-
+			f.write(f'\t\t\t\t\trouteState <= \'1\';\n')
 			f.write(f'\t\t\t\tif (({releasedLocks}) and ({freeStates})) then\n')
-			#f.write(f'\t\t\t\t\trestart <= \'0\';\n')
 			for net in route['Path']:
 				f.write(f'\t\t\t\t\t{net}_command <= RESERVE;\n')
+			#f.write(f'\t\t\t\t\trestart <= \'0\';\n')
 			f.write(f'\t\t\t\tend if;\n')
 			f.write(f'\t\t\t\tif ({reservedLocks})then\n')
 			#f.write(f'\t\t\t\t\trestart <= \'1\';\n')
@@ -4316,11 +4318,12 @@ class ACG():
 			f.write(f'\t\t\t\tend if;\n')
 
 			f.write(f'\r\t\t\twhen LOCKING_TRACKS =>\n')
-
+			f.write(f'\t\t\t\t\trouteState <= \'1\';\n')
 			f.write(f'\t\t\t\tif (({reservedLocks}) and ({freeStates})) then\n')
-			#f.write(f'\t\t\t\t\trestart <= \'0\';\n')
+			
 			for net in route['Path']:
 				f.write(f'\t\t\t\t\t{net}_command <= LOCK;\n')
+			#f.write(f'\t\t\t\t\trestart <= \'0\';\n')
 			f.write(f'\t\t\t\tend if;\n')
 			f.write(f'\t\t\t\tif ({lockedLocks})then\n')
 			#f.write(f'\t\t\t\t\trestart <= \'1\';\n')
@@ -4328,7 +4331,7 @@ class ACG():
 			f.write(f'\t\t\t\tend if;\n')
 
 			f.write(f'\r\t\t\twhen RESERVING_INFRASTRUCTURE =>\n')
-
+			f.write(f'\t\t\t\trouteState <= \'1\';\n')
 			infraestructure = []
 			for levelCrossing in lc_list:
 				if levelCrossing != None:
@@ -4341,9 +4344,10 @@ class ACG():
 		
 			if any(element != None for element in infraestructure):
 				f.write(f'\t\t\t\tif ({generalRelease}) then\n')
-				#f.write(f'\t\t\t\t\trestart <= \'0\';\n')
+				
 				for i in infraestructure:
 					f.write(f'\t\t\t\t\t{i}_command <= RESERVE;\n')
+				#f.write(f'\t\t\t\t\trestart <= \'0\';\n')
 				f.write(f'\t\t\t\tend if;\n')
 
 			generalReserve = " and ".join(f'{s}_lock = RESERVED' for s in infraestructure if s)
@@ -4354,10 +4358,11 @@ class ACG():
 				f.write(f'\t\t\t\t\troutingState <= LOCKING_INFRASTRUCTURE;\n')
 				f.write(f'\t\t\t\tend if;\n')
 			else:
+				#f.write(f'\t\t\t\t\trestart <= \'1\';\n')
 				f.write(f'\t\t\t\troutingState <= LOCKING_INFRASTRUCTURE;\n')
 
 			f.write(f'\r\t\t\twhen LOCKING_INFRASTRUCTURE =>\n')
-
+			f.write(f'\t\t\t\trouteState <= \'1\';\n')
 			infraestructure = []
 			for levelCrossing in lc_list:
 				if levelCrossing != None:
@@ -4370,9 +4375,9 @@ class ACG():
 		
 			if any(element != None for element in infraestructure):
 				f.write(f'\t\t\t\tif ({generalRelease}) then\n')
-				#f.write(f'\t\t\t\t\trestart <= \'0\';\n')
 				for i in infraestructure:
-					f.write(f'\t\t\t\t\t{i}_command <= LOCK;\n')				
+					f.write(f'\t\t\t\t\t{i}_command <= LOCK;\n')	
+				#f.write(f'\t\t\t\t\trestart <= \'0\';\n')			
 				f.write(f'\t\t\t\tend if;\n')
 
 			generalLock = " and ".join(f'{s}_lock = LOCKED' for s in infraestructure if s)
@@ -4381,14 +4386,15 @@ class ACG():
 				f.write(f'\t\t\t\tif ({generalLock})then\n')
 				#f.write(f'\t\t\t\t\trestart <= \'1\';\n')
 				#f.write(f'\t\t\t\t\troutingState <= DRIVING_SIGNAL;\n')
-				f.write(f'\t\t\t\t\trouteEnabled <= \'1\';\n')
+				
 				f.write(f'\t\t\t\t\troutingState <= SEQUENTIAL_RELEASE;\n')
 				
 				f.write(f'\t\t\t\tend if;\n')
 			else:
 				#f.write(f'\t\t\t\t\troutingState <= DRIVING_SIGNAL;\n')
-				f.write(f'\t\t\t\t\trouteEnabled <= \'1\';\n')
-				f.write(f'\t\t\t\t\troutingState <= SEQUENTIAL_RELEASE;\n')
+				#f.write(f'\t\t\t\t\trestart <= \'0\';\n')
+				
+				f.write(f'\t\t\t\troutingState <= SEQUENTIAL_RELEASE;\n')
 
 
 
@@ -4457,7 +4463,8 @@ class ACG():
 			#f.write(f'\t\t\t\t\trouteState <= \'1\';\n')
 			#f.write(f'\t\t\t\tend if;\n')
 			f.write(f'\t\t\t\tif ( {net}_state = OCCUPIED ) then\n')
-			#f.write(f'\t\t\t\t\trouteEnabled <= \'0\';\n')
+			#f.write(f'\t\t\t\t\trestart <= \'1\';\n')
+			f.write(f'\t\t\t\t\trouteState <= \'0\';\n')
 			f.write(f'\t\t\t\t\troutingState <= RELEASING_INFRASTRUCTURE;\n')
 			f.write(f'\t\t\t\tend if;\n')
 			
@@ -4474,17 +4481,18 @@ class ACG():
 
 			for net in route['Path']:
 				f.write(f'\t\t\t\t{net}_command <= RELEASE;\n')
-			f.write(f'\t\t\t\trouteEnabled <= \'0\';\n')
+			f.write(f'\t\t\t\trouteState <= \'0\';\n')
+			#f.write(f'\t\t\t\trestart <= \'1\';\n')
 			f.write(f'\t\t\t\troutingState <= WAITING_COMMAND;\n')
 
 			f.write(f'\r\t\t\twhen others =>\n')
-			#f.write(f'\t\t\t\trouteState <= \'0\';\n')
+			#f.write(f'\t\t\t\trestart <= \'1\';\n')
 			f.write(f'\t\t\t\troutingState <= WAITING_COMMAND;\n')
 			f.write(f'\t\tend case;\r\n')
-			#f.write(f'\t\tend if;\r\n')
 			f.write(f'\tend process;\r\n') 
 
-			f.write(f'\trouteState <= routeEnabled;\r\n') 
+			#f.write(f'\trouteState <= routeEnabled;\r\n') 
+			#f.write(f'\trouteState <= routeRequest;\r\n') 
 
 			f.write(f'end Behavioral;') 
 			f.close()  # Close header file
