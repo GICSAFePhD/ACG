@@ -420,7 +420,7 @@ class ACG():
 		n_signals_2 = n_signals_T + n_signals_B + n_signals_P
 		n_signals_3 = n_signals_S + n_signals_C + n_signals_L + n_signals_X + n_signals_J + n_signals_H
 
-		N = n_netElements + n_switches + 2*n_doubleSwitch + n_scissorCrossings + n_levelCrossings + 2*n_signals_2 + 2*n_signals_3
+		N = n_netElements + n_switches + n_doubleSwitch + n_scissorCrossings + n_levelCrossings + n_signals_2 + n_signals_3
 		M = N - n_netElements
 
 		print(f'n_netElements:{n_netElements}\nn_switch:{n_switches}\nn_doubleSwitch:{n_doubleSwitch}\nn_borders:{n_borders}\nn_buffers:{n_buffers}\nn_levelCrossings:{n_levelCrossings}\nn_platforms:{n_platforms}\nn_scissorCrossings:{n_scissorCrossings}\nn_signals:{n_signals_1+n_signals_2+n_signals_3}')
@@ -428,7 +428,7 @@ class ACG():
 
 		return N,M,n_netElements,n_switches,n_doubleSwitch,n_scissorCrossings,n_levelCrossings,n_signals_1,n_signals_2,n_signals_3
 
-	def createPacket(self,n_switches,n_doubleSwitch,n_scissorCrossings,n_levelCrossings,n_signals,example = 1):
+	def createPacket(self,N,n_switches,n_doubleSwitch,n_scissorCrossings,n_levelCrossings,n_signals,example = 1):
 		node = 'my_package'
 				
 		f = open(f'App/Layouts/Example_{example}/VHDL/{node}.vhd',"w+")
@@ -442,13 +442,25 @@ class ACG():
 		# Include body
 		packet = 'my_package'
 		f.write(f'\tpackage {packet} is\n')
-		
-		f.write(f'\t\ttype routeCommands is (RELEASE,RESERVE,LOCK);\r\n')
-		f.write(f'\t\ttype routeStates is (WAITING_COMMAND,RESERVING_TRACKS,LOCKING_TRACKS,RESERVING_INFRASTRUCTURE,LOCKING_INFRASTRUCTURE,DRIVING_SIGNAL,SEQUENTIAL_RELEASE,RELEASING_INFRASTRUCTURE);\r\n')
 
+		f.write(f'\t\ttype hex_char is (\'0\', \'1\', \'2\', \'3\', \'4\', \'5\', \'6\', \'7\', \'8\', \'9\', \'A\', \'B\', \'C\', \'D\', \'E\', \'F\');\r\n')
+		f.write(f'\t\ttype hex_array is array (natural range <>) of hex_char;\r\n')
+
+		f.write(f'\t\ttype ascii_array is array (0 to 255) of hex_char;\r\n')
+		f.write(f'\t\ttype ascii_packet is array (hex_char range <>) of std_logic_vector(8-1 downto 0);\r\n')
+
+		f.write(f'\t\t--LL|S\r\n')
 		f.write(f'\t\ttype nodeStates is (OCCUPIED,FREE);\r\n')
 
+
+		f.write(f'\t\ttype routeCommands is (RELEASE,RESERVE,LOCK);\r\n')
 		f.write(f'\t\ttype objectLock is (RELEASED,RESERVED,LOCKED);\r\n')
+
+		f.write(f'\t\ttype routeStates is (WAITING_COMMAND,RESERVING_TRACKS,LOCKING_TRACKS,RESERVING_INFRASTRUCTURE,LOCKING_INFRASTRUCTURE,DRIVING_SIGNAL,SEQUENTIAL_RELEASE,RELEASING_INFRASTRUCTURE);\r\n')
+
+		
+
+		
 
 		if n_switches > 0:
 			f.write(f'\t\ttype singleSwitchStates is (NORMAL,REVERSE,TRANSITION);\r\n')	
@@ -1247,7 +1259,7 @@ class ACG():
 		self.initialComment(node,f)
 		
 		# Include library
-		self.includeLibrary(f)
+		self.includeLibrary(f,True)
 			
 		# system entity
 		system = "system"
@@ -1281,7 +1293,7 @@ class ACG():
 		f.write(f'\t\t\tr_available :  in std_logic;\n')
 		f.write(f'\t\t\tled_rgb_1 :  out std_logic_vector(3-1 downto 0);\n')
 		f.write(f'\t\t\tled_rgb_2 :  out std_logic_vector(3-1 downto 0);\n')
-		f.write(f'\t\t\tpacket :  out std_logic_vector({str(N)}-1 downto 0);\n')
+		f.write(f'\t\t\tpacket : out hex_array({N}-1 downto 0);\n')
 		f.write(f'\t\t\tprocessing :  in std_logic;\n')
 		f.write(f'\t\t\tprocessed :  out std_logic;\n')
 		f.write(f'\t\t\tN :  in integer;\n')
@@ -1298,8 +1310,8 @@ class ACG():
 		f.write(f'\t\t\tclock :  in std_logic;\n')
 		f.write(f'\t\t\tprocessing :  in std_logic;\n')
 		f.write(f'\t\t\tprocessed :  out std_logic;\n')
-		f.write(f'\t\t\tpacket_i :  in std_logic_vector({str(N)}-1 downto 0);\n')
-		f.write(f'\t\t\tpacket_o :  out std_logic_vector({str(M)}-1 downto 0);\n')
+		f.write(f'\t\t\tpacket_i : in hex_array({str(N)}-1 downto 0);\n')
+		f.write(f'\t\t\tpacket_o : out hex_array({str(N)}-1 downto 0);\n')
 		f.write(f'\t\t\treset :  in std_logic\n')
 		f.write(f'\t\t);\n')
 		f.write(f'\tend component {interlocking};\r\n')
@@ -1328,15 +1340,15 @@ class ACG():
 		f.write(f'\t\t\tclock :  in std_logic;\n')
 		f.write(f'\t\t\tprocessing :  in std_logic;\n')
 		f.write(f'\t\t\tprocessed :  out std_logic;\n')
-		f.write(f'\t\t\tpacket_i :  in std_logic_vector({str(M)}-1 downto 0);\n')
+		f.write(f'\t\t\tpacket_i : in hex_array({str(N)}-1 downto 0);\n')
 		f.write(f'\t\t\tw_data :  out std_logic_vector(8-1 downto 0);\n')
 		f.write(f'\t\t\twr_uart :  out std_logic;\n')
 		f.write(f'\t\t\treset :  in std_logic\n')
 		f.write(f'\t\t);\n')
 		f.write(f'\tend component {printer};\r\n')
 		
-		f.write(f'\tSignal packet_i_s : std_logic_vector({str(N)}-1 downto 0);\n')
-		f.write(f'\tSignal packet_o_s : std_logic_vector({str(M)}-1 downto 0);\n')
+		f.write(f'\tSignal packet_i_s : hex_array({str(N)}-1 downto 0);\n')
+		f.write(f'\tSignal packet_o_s : hex_array({str(N)}-1 downto 0);\n')
 		
 		f.write(f'\tSignal w_data_1,w_data_2,w_data_3 : std_logic_vector(8-1 downto 0);\n')
 		f.write(f'\tSignal wr_uart_1_s,wr_uart_2_s : std_logic;\n')
@@ -1402,10 +1414,7 @@ class ACG():
 		f.write(f'\t\t\t\tif selector2 = \'1\' then\n')
 		f.write(f'\t\t\t\t\tleds <= std_logic_vector(to_unsigned(N,4));\n')
 		f.write(f'\t\t\t\telse\n')
-		f.write(f'\t\t\t\t\tleds(3) <= packet_i_s(3);\n')
-		f.write(f'\t\t\t\t\tleds(2) <= packet_i_s(2);\n')
-		f.write(f'\t\t\t\t\tleds(1) <= packet_i_s(1);\n') 
-		f.write(f'\t\t\t\t\tleds(0) <= packet_i_s(0);\n')  
+		f.write(f'\t\t\t\t\tleds <= std_logic_vector(to_unsigned(N,4));\n')
 		f.write(f'\t\t\t\tend if;\n')
 		f.write(f'\t\t\tend if;\n')
 		f.write(f'\t\tend process;\r\n') 
@@ -1441,7 +1450,7 @@ class ACG():
 		self.initialComment(node,f)
 		
 		# Include library
-		self.includeLibrary(f)
+		self.includeLibrary(f,True)
 			
 		# detector entity
 		detector = "detector"
@@ -1452,7 +1461,7 @@ class ACG():
 		f.write(f'\t\t\tr_available : in std_logic;\n')
 		f.write(f'\t\t\tled_rgb_1 : out std_logic_vector(3-1 downto 0);\n')
 		f.write(f'\t\t\tled_rgb_2 : out std_logic_vector(3-1 downto 0);\n')
-		f.write(f'\t\t\tpacket : out std_logic_vector({str(N)}-1 downto 0);\n')
+		f.write(f'\t\t\tpacket : out hex_array({N}-1 downto 0);\n')
 		f.write(f'\t\t\tprocessing : in std_logic;\n')
 		f.write(f'\t\t\tprocessed : out std_logic;\n')
 		f.write(f'\t\t\tN : in integer;\n')
@@ -1471,8 +1480,16 @@ class ACG():
 		
 		f.write(f'\tconstant tag_start : std_logic_vector(8-1 downto 0) := "00111100"; -- r_data = \'<\'\n')
 		f.write(f'\tconstant tag_end : std_logic_vector(8-1 downto 0) := "00111110"; -- r_data = \'>\'\n')
-		f.write(f'\tconstant char_0 : std_logic_vector(8-1 downto 0) := "00110000"; -- r_data = \'0\'\n')
-		f.write(f'\tconstant char_1 : std_logic_vector(8-1 downto 0) := "00110001"; -- r_data = \'1\' \r\n')
+		f.write(f'\tconstant char_0 : std_logic_vector(8-1 downto 0) := "00110000"; -- r_data = 0\n')
+		f.write(f'\tconstant char_1 : std_logic_vector(8-1 downto 0) := "00110001"; -- r_data = 1 \r\n')
+
+		f.write(f'\t-- Lookup table for ASCII to hex_char conversion\r\n')
+		f.write(f'\tconstant ascii_to_hex : ascii_array := (\r\n')
+		
+		f.write(f'\t\t48 => \'0\', 49 => \'1\', 50 => \'2\', 51 => \'3\', 52 => \'4\', 53 => \'5\', 54 => \'6\', 55 => \'7\',\r\n')
+		f.write(f'\t\t56 => \'8\', 57 => \'9\', 65 => \'A\', 66 => \'B\', 67 => \'C\', 68 => \'D\', 69 => \'E\', 70 => \'F\',\r\n')
+		f.write(f'\t\tothers => \'0\' -- default value\r\n')
+		f.write(f'\t);\r\n')
 
 		f.write(f'begin\r\n')
 
@@ -1512,13 +1529,20 @@ class ACG():
 		f.write(f'\t\t\t\t\t\t\t\tstate <= error;\n')
 		f.write(f'\t\t\t\t\t\t\tend if;\n')
 		f.write(f'\t\t\t\t\t\tend if;\n')
-		f.write(f'\t\t\t\t\t\tif counter < {str(N+2)} then\n')				      
+		f.write(f'\t\t\t\t\t\tif counter < {str(N+2)} then\n')	
+
+		
+		f.write(f'\t\t\t\t\t\t\tpacket({str(N)}-counter) <= ascii_to_hex(to_integer(unsigned(r_data)));\n')
+	
+		'''		      
 		f.write(f'\t\t\t\t\t\t\tif r_data = char_0 then\n')
 		f.write(f'\t\t\t\t\t\t\t\tpacket({str(N)}-counter) <= \'0\';\n')
 		f.write(f'\t\t\t\t\t\t\tend if;\n')
+
 		f.write(f'\t\t\t\t\t\t\tif r_data = char_1 then\n')
 		f.write(f'\t\t\t\t\t\t\t\tpacket({str(N)}-counter) <= \'1\';\n')
 		f.write(f'\t\t\t\t\t\t\tend if;\n')
+		'''	
 		f.write(f'\t\t\t\t\t\t\tcounter := counter + 1;\n')
 		f.write(f'\t\t\t\t\t\telse\n')
 		f.write(f'\t\t\t\t\t\t\tcounter := 0;\n')
@@ -1600,8 +1624,8 @@ class ACG():
 		f.write(f'\t\t\tclock : in std_logic;\n')
 		f.write(f'\t\t\tprocessing : in std_logic;\n')
 		f.write(f'\t\t\tprocessed : out std_logic;\n')
-		f.write(f'\t\t\tpacket_i : in std_logic_vector({str(N)}-1 downto 0);\n')
-		f.write(f'\t\t\tpacket_o : out std_logic_vector({str(M)}-1 downto 0);\n')
+		f.write(f'\t\t\tpacket_i : in hex_array({str(N)}-1 downto 0);\n')
+		f.write(f'\t\t\tpacket_o : out hex_array({str(N)}-1 downto 0);\n')
 		f.write(f'\t\t\treset : in std_logic\n')
 		f.write(f'\t\t);\n')
 		f.write(f'\tend entity {interlocking};\n')
@@ -1612,48 +1636,44 @@ class ACG():
 		splitter = 'splitter'
 		f.write(f'\tcomponent {splitter} is\n')
 		f.write(f'\t\tgeneric(\n')
-		f.write(f'\t\t\tN : natural := {str(N)};\n')
-		f.write(f'\t\t\tN_SIGNALS : natural := {str(n_signals)};\n')
-		if n_routes > 0:
+		if n_netElements > 0:
+    			f.write(f'\t\t\tN_TRACKCIRCUITS : natural := {str(n_netElements)};\n')	
+		if n_routes > 0:         
 			f.write(f'\t\t\tN_ROUTES : natural := {str(n_routes)};\n')
+		if n_signals > 0:
+			f.write(f'\t\t\tN_SIGNALS : natural := {str(n_signals)};\n')
 		if n_levelCrossings > 0:
 			f.write(f'\t\t\tN_LEVELCROSSINGS : natural := {str(n_levelCrossings)};\n')
-		if n_switches > 0:    
+		if n_switches > 0:         
 			f.write(f'\t\t\tN_SINGLESWITCHES : natural := {str(n_switches)};\n')
 		if n_doubleSwitch > 0:         
-			f.write(f'\t\t\tN_DOUBLESWITCHES : natural := {str(n_doubleSwitch)};\n')
+			f.write(f'\t\t\tN_DOUBLEWITCHES : natural := {str(n_doubleSwitch)};\n')
 		if n_scissorCrossings > 0:         
-			f.write(f'\t\t\tN_SCISSORCROSSINGS : natural := {str(n_scissorCrossings)};\n')
-		f.write(f'\t\t\tN_TRACKCIRCUITS : natural := {str(n_netElements)}\n')
+			f.write(f'\t\t\tN_SCRISSORCROSSINGS : natural := {str(n_scissorCrossings)};\n')
+		f.write(f'\t\t\tN : natural := {str(N)}\n')  
+
 		f.write(f'\t\t);\n')
 		f.write(f'\t\tport(\n')
 		f.write(f'\t\t\tclock : in std_logic;\n')
-		f.write(f'\t\t\tprocessing : in std_logic;\n')
-		f.write(f'\t\t\tprocessed : out std_logic;\n')
-		f.write(f'\t\t\tpacket : in std_logic_vector(N-1 downto 0);\n')
-		f.write(f'\t\t\tocupation : out std_logic_vector(N_TRACKCIRCUITS-1 downto 0);\n')
-		f.write(f'\t\t\tsignals : out signals_type;\n')
-		if n_routes > 1:
-			f.write(f'\t\t\troutes :  out std_logic_vector(N_ROUTES-1 downto 0);\n')
-		if n_routes == 1:
-			f.write(f'\t\t\troutes :  out std_logic;\n')
-		if n_levelCrossings > 1:
-			f.write(f'\t\t\tlevelCrossings :  out std_logic_vector(N_LEVELCROSSINGS-1 downto 0);\n')
-		if n_levelCrossings == 1:
-			f.write(f'\t\t\tlevelCrossings :  out std_logic;\n')
-		if n_switches > 1:
-			f.write(f'\t\t\tsingleSwitches :  out std_logic_vector(N_SINGLESWITCHES-1 downto 0);\n')    
-		if n_switches == 1:
-			f.write(f'\t\t\tsingleSwitches :  out std_logic;\n')
-		if n_doubleSwitch > 1:
-			f.write(f'\t\t\tdoubleSwitches :  out dSwitches_type;\n')    
-		if n_doubleSwitch == 1:
-			f.write(f'\t\t\tdoubleSwitches :  out dSwitch_type;\n')    
-		if n_scissorCrossings > 1:
-			f.write(f'\t\t\tscissorCrossings :  out std_logic_vector(N_SCISSORCROSSINGS-1 downto 0);\n')    
-		if n_scissorCrossings == 1:
-			f.write(f'\t\t\tscissorCrossings :  out std_logic;\n')
-		f.write(f'\t\t\treset :  in std_logic\n')    
+		f.write(f'\t\t\tprocessing :  in std_logic;\n')
+		f.write(f'\t\t\tprocessed :  out std_logic;\n')
+
+		f.write(f'\t\t\tpacket :  in hex_array(N-1 downto 0);\n')
+		
+		f.write(f'\t\t\ttracks :  out hex_array(N_TRACKCIRCUITS-1 downto 0);\n')
+		if n_routes >= 1:
+			f.write(f"\t\t\troutes : out {'hex_array(N_ROUTES-1 downto 0)' if n_routes > 1 else 'hex_char'};\n")
+		if n_signals >= 1:
+			f.write(f"\t\t\tsignals : out {'hex_array(N_SIGNALS-1 downto 0)' if n_signals > 1 else 'hex_char'};\n")
+		if n_levelCrossings >= 1:
+			f.write(f"\t\t\tlevelCrossings : out {'hex_array(N_LEVELCROSSINGS-1 downto 0)' if n_levelCrossings > 1 else 'hex_char'};\n")
+		if n_switches >= 1:
+			f.write(f"\t\t\tsingleSwitches : out {'hex_array(N_SINGLESWITCHES-1 downto 0)' if n_switches > 1 else 'hex_char'};\n")
+		if n_scissorCrossings >= 1:
+			f.write(f"\t\t\tscissorCrossings : out {'hex_array(N_SCRISSORCROSSINGS-1 downto 0)' if n_scissorCrossings > 1 else 'hex_char'};\n")
+		if n_doubleSwitch >= 1:
+			f.write(f"\t\t\tdoubleSwitches : out {'hex_array(N_DOUBLESWITCHES-1 downto 0)' if n_doubleSwitch > 1 else 'hex_char'};\n")
+		f.write(f'\t\t\treset : in std_logic\n')
 		f.write(f'\t\t);\n')
 		f.write(f'\tend component {splitter};\r\n')
 		
@@ -1661,60 +1681,62 @@ class ACG():
 		network = 'network'
 		f.write(f'\tcomponent {network} is\n')
 		f.write(f'\t\tgeneric(\n')
-		f.write(f'\t\t\tN : natural := {str(N)};\n')
-		
-		f.write(f'\t\t\tN_SIGNALS : natural := {str(n_signals)};\n')
-		if n_routes > 0:
+		if n_netElements > 0:
+			f.write(f'\t\t\tN_TRACKCIRCUITS : natural := {str(n_netElements)};\n')	
+		if n_routes > 0:         
 			f.write(f'\t\t\tN_ROUTES : natural := {str(n_routes)};\n')
+		if n_signals > 0:
+			f.write(f'\t\t\tN_SIGNALS : natural := {str(n_signals)};\n')
 		if n_levelCrossings > 0:
 			f.write(f'\t\t\tN_LEVELCROSSINGS : natural := {str(n_levelCrossings)};\n')
-		if n_switches > 0:    
+		if n_switches > 0:         
 			f.write(f'\t\t\tN_SINGLESWITCHES : natural := {str(n_switches)};\n')
-		if n_doubleSwitch > 0:    
+		if n_doubleSwitch > 0:         
 			f.write(f'\t\t\tN_DOUBLEWITCHES : natural := {str(n_doubleSwitch)};\n')
-		if n_scissorCrossings > 0:    
-			f.write(f'\t\t\tN_SCISSORCROSSINGS : natural := {str(n_scissorCrossings)};\n')
-		f.write(f'\t\t\tN_TRACKCIRCUITS : natural := {str(n_netElements)}\n')
+		if n_scissorCrossings > 0:         
+			f.write(f'\t\t\tN_SCRISSORCROSSINGS : natural := {str(n_scissorCrossings)};\n')
+		f.write(f'\t\t\tN : natural := {str(N)}\n')  
 		f.write(f'\t\t);\n')
 		f.write(f'\t\tport(\n')
 		f.write(f'\t\t\tclock : in std_logic;\n')
 		f.write(f'\t\t\tprocessing : in std_logic;\n')
 		f.write(f'\t\t\tprocessed : out std_logic;\n')
-		f.write(f'\t\t\tocupation : in std_logic_vector(N_TRACKCIRCUITS-1 downto 0);\n') 
-		f.write(f'\t\t\tsignals_i : in signals_type;\n')
-		f.write(f'\t\t\tsignals_o : out signals_type;\n')
+		f.write(f'\t\t\ttracks_i: in hex_array(N_TRACKCIRCUITS-1 downto 0);\n') 
+		f.write(f'\t\t\ttracks_o: out hex_array(N_TRACKCIRCUITS-1 downto 0);\n') 
+		f.write(f'\t\t\tsignals_i : in hex_array(N_SIGNALS-1 downto 0);\n')
+		f.write(f'\t\t\tsignals_o : out hex_array(N_SIGNALS-1 downto 0);\n')
 		if n_routes > 1:
-			f.write(f'\t\t\troutes_i : in std_logic_vector(N_ROUTES-1 downto 0);\n')
-			f.write(f'\t\t\troutes_o : out std_logic_vector(N_ROUTES-1 downto 0);\n')
+			f.write(f'\t\t\troutes_i : in hex_array(N_ROUTES-1 downto 0);\n')
+			f.write(f'\t\t\troutes_o : out hex_array(N_ROUTES-1 downto 0);\n')
 		if n_routes == 1:
-			f.write(f'\t\t\troutes_i : in std_logic;\n')
-			f.write(f'\t\t\troutes_o : out std_logic;\n')
+			f.write(f'\t\t\troutes_i : in hex_char;\n')
+			f.write(f'\t\t\troutes_o : out hex_char;\n')
 		if n_levelCrossings > 1:
-			f.write(f'\t\t\tlevelCrossings_i : in std_logic_vector(N_LEVELCROSSINGS-1 downto 0);\n')
-			f.write(f'\t\t\tlevelCrossings_o : out std_logic_vector(N_LEVELCROSSINGS-1 downto 0);\n')
+			f.write(f'\t\t\tlevelCrossings_i : in hex_array(N_LEVELCROSSINGS-1 downto 0);\n')
+			f.write(f'\t\t\tlevelCrossings_o : out hex_array(N_LEVELCROSSINGS-1 downto 0);\n')
 		if n_levelCrossings == 1:
-			f.write(f'\t\t\tlevelCrossings_i : in std_logic;\n')
-			f.write(f'\t\t\tlevelCrossings_o : out std_logic;\n')
+			f.write(f'\t\t\tlevelCrossings_i : in hex_char;\n')
+			f.write(f'\t\t\tlevelCrossings_o : out hex_char;\n')
 		if n_switches > 1:
-			f.write(f'\t\t\tsingleSwitches_i : in std_logic_vector(N_SINGLESWITCHES-1 downto 0);\n')  
-			f.write(f'\t\t\tsingleSwitches_o : out std_logic_vector(N_SINGLESWITCHES-1 downto 0);\n')
+			f.write(f'\t\t\tsingleSwitches_i : in hex_array(N_SINGLESWITCHES-1 downto 0);\n')  
+			f.write(f'\t\t\tsingleSwitches_o : out hex_array(N_SINGLESWITCHES-1 downto 0);\n')
 		if n_switches == 1:
-			f.write(f'\t\t\tsingleSwitches_i : in std_logic;\n')  
-			f.write(f'\t\t\tsingleSwitches_o : out std_logic;\n')
+			f.write(f'\t\t\tsingleSwitches_i : in hex_char;\n')  
+			f.write(f'\t\t\tsingleSwitches_o : out hex_char;\n')
 
 		if n_doubleSwitch > 1:
-			f.write(f'\t\t\tdoubleSwitches_i : in dSwitches_type;\n')  
-			f.write(f'\t\t\tdoubleSwitches_o : out dSwitches_type;\n')
+			f.write(f'\t\t\tdoubleSwitches_i : in hex_array(N_DOUBLESWITCHES-1 downto 0);\n')  
+			f.write(f'\t\t\tdoubleSwitches_o : out hex_array(N_DOUBLESWITCHES-1 downto 0);\n')
 		if n_doubleSwitch == 1:
-			f.write(f'\t\t\tdoubleSwitches_i : in dSwitch_type;\n')  
-			f.write(f'\t\t\tdoubleSwitches_o : out dSwitch_type;\n')
+			f.write(f'\t\t\tdoubleSwitches_i : in hex_char;\n')  
+			f.write(f'\t\t\tdoubleSwitches_o : out hex_char;\n')
 				
 		if n_scissorCrossings > 1:
-			f.write(f'\t\t\tscissorCrossings_i : in std_logic_vector(N_SCISSORCROSSINGS-1 downto 0);\n')  
-			f.write(f'\t\t\tscissorCrossings_o : out std_logic_vector(N_SCISSORCROSSINGS-1 downto 0);\n')
+			f.write(f'\t\t\tscissorCrossings_i : in hex_array(N_SCISSORCROSSINGS-1 downto 0);\n')  
+			f.write(f'\t\t\tscissorCrossings_o : out hex_array(N_SCISSORCROSSINGS-1 downto 0);\n')
 		if n_scissorCrossings == 1:
-			f.write(f'\t\t\tscissorCrossings_i : in std_logic;\n')  
-			f.write(f'\t\t\tscissorCrossings_o : out std_logic;\n')
+			f.write(f'\t\t\tscissorCrossings_i : in hex_char;\n')  
+			f.write(f'\t\t\tscissorCrossings_o : out hex_char;\n')
 	
 		f.write(f'\t\t\treset : in std_logic\n')
 		f.write(f'\t\t);\n')
@@ -1724,75 +1746,68 @@ class ACG():
 		mediator = 'mediator'
 		f.write(f'\tcomponent {mediator} is\n')
 		f.write(f'\t\tgeneric(\n')
-		f.write(f'\t\t\tN : natural := {str(N)};\n')
-		
-		f.write(f'\t\t\tN_SIGNALS : natural := {str(n_signals)};\n')
-		if n_routes > 0:
+		if n_netElements > 0:
+			f.write(f'\t\t\tN_TRACKCIRCUITS : natural := {str(n_netElements)};\n')	
+		if n_routes > 0:         
 			f.write(f'\t\t\tN_ROUTES : natural := {str(n_routes)};\n')
+		if n_signals > 0:
+			f.write(f'\t\t\tN_SIGNALS : natural := {str(n_signals)};\n')
 		if n_levelCrossings > 0:
 			f.write(f'\t\t\tN_LEVELCROSSINGS : natural := {str(n_levelCrossings)};\n')
-		if n_switches > 0:    
+		if n_switches > 0:         
 			f.write(f'\t\t\tN_SINGLESWITCHES : natural := {str(n_switches)};\n')
-		if n_doubleSwitch > 0:
-			f.write(f'\t\t\tN_DOUBLESWITCHES : natural := {str(n_doubleSwitch)};\n')
-		if n_scissorCrossings > 0:
-			f.write(f'\t\t\tN_SCISSORCROSSINGS : natural := {str(n_scissorCrossings)};\n')
+		if n_doubleSwitch > 0:         
+			f.write(f'\t\t\tN_DOUBLEWITCHES : natural := {str(n_doubleSwitch)};\n')
+		if n_scissorCrossings > 0:         
+			f.write(f'\t\t\tN_SCRISSORCROSSINGS : natural := {str(n_scissorCrossings)};\n')
+		f.write(f'\t\t\tN : natural := {str(N)}\n')  
 
-		f.write(f'\t\t\tN_TRACKCIRCUITS : natural := {str(n_netElements)}\n')    
 		f.write(f'\t\t);\n')
 		f.write(f'\t\tport(\n')
 		f.write(f'\t\t\tclock : in std_logic;\n')
 		f.write(f'\t\t\tprocessing : in std_logic;\n')
 		f.write(f'\t\t\tprocessed : out std_logic;\n')
-		f.write(f'\t\t\tsignals : in signals_type;\n')
-		if n_routes > 1:
-			f.write(f'\t\t\troutes : in std_logic_vector(N_ROUTES-1 downto 0);\n')
-		if n_routes == 1:
-			f.write(f'\t\t\troutes : in std_logic;\n')
-		if n_levelCrossings > 1:
-			f.write(f'\t\t\tlevelCrossings : in std_logic_vector(N_LEVELCROSSINGS-1 downto 0);\n')
-		if n_levelCrossings == 1:
-			f.write(f'\t\t\tlevelCrossings : in std_logic;\n')
-		if n_switches > 1:
-			f.write(f'\t\t\tsingleSwitches : in std_logic_vector(N_SINGLESWITCHES-1 downto 0);\n')
-		if n_switches == 1:
-			f.write(f'\t\t\tsingleSwitches : in std_logic;\n')
-		if n_scissorCrossings > 1:
-			f.write(f'\t\t\tscissorCrossings : in std_logic_vector(N_SCISSORCROSSINGS-1 downto 0);\n')
-		if n_scissorCrossings == 1:
-			f.write(f'\t\t\tscissorCrossings : in std_logic;\n')
-		if n_doubleSwitch > 1:
-			f.write(f'\t\t\tdoubleSwitches : in dSwitches_type;\n')
-		if n_doubleSwitch == 1:
-			f.write(f'\t\t\tdoubleSwitches : in dSwitch_type;\n')
+		f.write(f'\t\t\ttracks :  in hex_array(N_TRACKCIRCUITS-1 downto 0);\n')
+		if n_routes >= 1:
+			f.write(f"\t\t\troutes : in {'hex_array(N_ROUTES-1 downto 0)' if n_routes > 1 else 'hex_char'};\n")
+		if n_signals >= 1:
+			f.write(f"\t\t\tsignals : in {'hex_array(N_SIGNALS-1 downto 0)' if n_signals > 1 else 'hex_char'};\n")
+		if n_levelCrossings >= 1:
+			f.write(f"\t\t\tlevelCrossings : in {'hex_array(N_LEVELCROSSINGS-1 downto 0)' if n_levelCrossings > 1 else 'hex_char'};\n")
+		if n_switches >= 1:
+			f.write(f"\t\t\tsingleSwitches : in {'hex_array(N_SINGLESWITCHES-1 downto 0)' if n_switches > 1 else 'hex_char'};\n")
+		if n_scissorCrossings >= 1:
+			f.write(f"\t\t\tscissorCrossings : in {'hex_array(N_SCRISSORCROSSINGS-1 downto 0)' if n_scissorCrossings > 1 else 'hex_char'};\n")
+		if n_doubleSwitch >= 1:
+			f.write(f"\t\t\tdoubleSwitches : in {'hex_array(N_DOUBLESWITCHES-1 downto 0)' if n_doubleSwitch > 1 else 'hex_char'};\n")
 
-		f.write(f'\t\t\toutput : out std_logic_vector({str(M)}-1 downto 0);\n')
+		f.write(f'\t\t\toutput : out hex_array({str(N)}-1 downto 0);\n')
 		f.write(f'\t\t\treset : in std_logic\n')
 		f.write(f'\t\t);\n')
 		f.write(f'\tend component {mediator};\r\n')
 		
-		f.write(f'\tSignal tc_s : std_logic_vector({str(n_netElements)}-1 downto 0);\n')    
-		f.write(f'\tSignal sig_s_i,sig_s_o : signals_type;\n')
+		f.write(f'\tSignal tc_s_i,tc_s_o : hex_array({str(n_netElements)}-1 downto 0);\n')    
+		f.write(f'\tSignal sig_s_i,sig_s_o : hex_array({str(n_signals)}-1 downto 0);\n')
 		if n_routes > 1:
-			f.write(f'\tSignal rt_s_i,rt_s_o : std_logic_vector({str(n_routes)}-1 downto 0);\n')
+			f.write(f'\tSignal rt_s_i,rt_s_o : hex_array({str(n_routes)}-1 downto 0);\n')
 		if n_routes == 1:
-			f.write(f'\tSignal rt_s_i,rt_s_o : std_logic;\n')
+			f.write(f'\tSignal rt_s_i,rt_s_o : hex_char;\n')
 		if n_levelCrossings > 1:
-			f.write(f'\tSignal lc_s_i,lc_s_o : std_logic_vector({str(n_levelCrossings)}-1 downto 0);\n')
+			f.write(f'\tSignal lc_s_i,lc_s_o : hex_array({str(n_levelCrossings)}-1 downto 0);\n')
 		if n_levelCrossings == 1:
-			f.write(f'\tSignal lc_s_i,lc_s_o : std_logic;\n')
+			f.write(f'\tSignal lc_s_i,lc_s_o : hex_char;\n')
 		if n_switches > 1:
-			f.write(f'\tSignal ssw_s_i,ssw_s_o : std_logic_vector({str(n_switches)}-1 downto 0);\n')
+			f.write(f'\tSignal ssw_s_i,ssw_s_o : hex_array({str(n_switches)}-1 downto 0);\n')
 		if n_switches == 1:
-			f.write(f'\tSignal ssw_s_i,ssw_s_o : std_logic;\n')
+			f.write(f'\tSignal ssw_s_i,ssw_s_o : hex_char;\n')
 		if n_scissorCrossings > 1:
-			f.write(f'\tSignal sc_s_i,sc_s_o : std_logic_vector({str(n_scissorCrossings)}-1 downto 0);\n')
+			f.write(f'\tSignal sc_s_i,sc_s_o : hex_array({str(n_scissorCrossings)}-1 downto 0);\n')
 		if n_scissorCrossings == 1:
-			f.write(f'\tSignal sc_s_i,sc_s_o : std_logic;\n')
+			f.write(f'\tSignal sc_s_i,sc_s_o : hex_char;\n')
 		if n_doubleSwitch > 1:
-			f.write(f'\tSignal dsw_s_i,dsw_s_o : dSwitches_type;\n')
+			f.write(f'\tSignal dsw_s_i,dsw_s_o : hex_array({str(n_doubleSwitch)}-1 downto 0);\n')
 		if n_doubleSwitch == 1:
-			f.write(f'\tSignal dsw_s_i,dsw_s_o : dSwitch_type;\n')
+			f.write(f'\tSignal dsw_s_i,dsw_s_o : hex_char;\n')
 		f.write(f'\tSignal process_spt_int, process_int_med : std_logic;\n')
 		
 		f.write(f'\nbegin\r\n')  
@@ -1817,7 +1832,7 @@ class ACG():
 		f.write(f'\t\tpacket => packet_i,\n')
 		f.write(f'\t\tprocessing => processing,\n')
 		f.write(f'\t\tprocessed => process_spt_int,\n')
-		f.write(f'\t\tocupation => tc_s,\n')
+		f.write(f'\t\ttracks => tc_s_i,\n')
 
 		f.write(f'\t\tsignals => sig_s_i,\n')
 		if n_routes > 0:
@@ -1854,6 +1869,8 @@ class ACG():
 		if n_scissorCrossings > 0:    
 			f.write(f'\t\tscissorCrossings => sc_s_o,\n')
 
+		f.write(f'\t\ttracks => tc_s_o,\n')
+
 		f.write(f'\t\toutput => packet_o,\n')
 		f.write(f'\t\treset => reset\n')    
 		f.write(f'\t\t);\r\n')
@@ -1864,7 +1881,8 @@ class ACG():
 		f.write(f'\t{name}_i : {name} port map(\n')
 		
 		f.write(f'\t\tclock => clock,\n')
-		f.write(f'\t\tocupation => tc_s,\n')
+		f.write(f'\t\ttracks_i => tc_s_i,\n')
+		f.write(f'\t\ttracks_o => tc_s_o,\n')
 		f.write(f'\t\tprocessing => process_spt_int,\n')
 		f.write(f'\t\tprocessed => process_int_med,\n')
 		f.write(f'\t\tsignals_i => sig_s_i,\n')
@@ -1904,8 +1922,13 @@ class ACG():
 		splitter = "splitter"
 		f.write(f'\tentity {splitter} is\n')
 		f.write(f'\t\tgeneric(\n')
-		f.write(f'\t\t\tN : natural := {str(N)};\n')   
-		f.write(f'\t\t\tN_SIGNALS : natural := {str(n_signals)};\n')
+		 
+		if n_netElements > 0:
+			f.write(f'\t\t\tN_TRACKCIRCUITS : natural := {str(n_netElements)};\n')	
+		if n_routes > 0:         
+			f.write(f'\t\t\tN_ROUTES : natural := {str(n_routes)};\n')
+		if n_signals > 0:
+			f.write(f'\t\t\tN_SIGNALS : natural := {str(n_signals)};\n')
 		if n_levelCrossings > 0:
 			f.write(f'\t\t\tN_LEVELCROSSINGS : natural := {str(n_levelCrossings)};\n')
 		if n_switches > 0:         
@@ -1914,66 +1937,35 @@ class ACG():
 			f.write(f'\t\t\tN_DOUBLEWITCHES : natural := {str(n_doubleSwitch)};\n')
 		if n_scissorCrossings > 0:         
 			f.write(f'\t\t\tN_SCRISSORCROSSINGS : natural := {str(n_scissorCrossings)};\n')
-		if n_routes > 0:         
-			f.write(f'\t\t\tN_ROUTES : natural := {str(n_routes)};\n')
-		f.write(f'\t\t\tN_TRACKCIRCUITS : natural := {str(n_netElements)}\n')
+		f.write(f'\t\t\tN : natural := {str(N)}\n')  
+
 		f.write(f'\t\t);\n')
 		f.write(f'\t\tport(\n')
 		f.write(f'\t\t\tclock : in std_logic;\n')
-		
-		f.write(f'\t\t\tpacket :  in std_logic_vector(N-1 downto 0);\n')
 		f.write(f'\t\t\tprocessing :  in std_logic;\n')
 		f.write(f'\t\t\tprocessed :  out std_logic;\n')
-		f.write(f'\t\t\tocupation :  out std_logic_vector(N_TRACKCIRCUITS-1 downto 0);\n')
-		f.write(f'\t\t\tsignals :  out signals_type;\n')
-		if n_routes > 1:
-			f.write(f'\t\t\troutes : out std_logic_vector(N_ROUTES-1 downto 0);\n')		
-		if n_routes == 1:
-			f.write(f'\t\t\troutes : out std_logic;\n')
-		if n_levelCrossings > 1:
-			f.write(f'\t\t\tlevelCrossings : out std_logic_vector(N_LEVELCROSSINGS-1 downto 0);\n')
-		if n_levelCrossings == 1:
-			f.write(f'\t\t\tlevelCrossings : out std_logic;\n')
-		if n_switches > 1:
-			f.write(f'\t\t\tsingleSwitches : out std_logic_vector(N_SINGLESWITCHES-1 downto 0);\n')  
-		if n_switches == 1:
-			f.write(f'\t\t\tsingleSwitches : out std_logic;\n')  
-		if n_scissorCrossings > 1:
-			f.write(f'\t\t\tscissorCrossings : out std_logic_vector(N_SCRISSORCROSSINGS-1 downto 0);\n')  
-		if n_scissorCrossings == 1:
-			f.write(f'\t\t\tscissorCrossings : out std_logic;\n')
-		if n_doubleSwitch > 1:
-			f.write(f'\t\t\tdoubleSwitches : out dSwitches_type;\n') 
-		if n_doubleSwitch == 1:
-			f.write(f'\t\t\tdoubleSwitches : out dSwitch_type;\n')
+
+		f.write(f'\t\t\tpacket :  in hex_array(N-1 downto 0);\n')
+		
+		f.write(f'\t\t\ttracks :  out hex_array(N_TRACKCIRCUITS-1 downto 0);\n')
+		if n_routes >= 1:
+			f.write(f"\t\t\troutes : out {'hex_array(N_ROUTES-1 downto 0)' if n_routes > 1 else 'hex_char'};\n")
+		if n_signals >= 1:
+			f.write(f"\t\t\tsignals : out {'hex_array(N_SIGNALS-1 downto 0)' if n_signals > 1 else 'hex_char'};\n")
+		if n_levelCrossings >= 1:
+			f.write(f"\t\t\tlevelCrossings : out {'hex_array(N_LEVELCROSSINGS-1 downto 0)' if n_levelCrossings > 1 else 'hex_char'};\n")
+		if n_switches >= 1:
+			f.write(f"\t\t\tsingleSwitches : out {'hex_array(N_SINGLESWITCHES-1 downto 0)' if n_switches > 1 else 'hex_char'};\n")
+		if n_scissorCrossings >= 1:
+			f.write(f"\t\t\tscissorCrossings : out {'hex_array(N_SCRISSORCROSSINGS-1 downto 0)' if n_scissorCrossings > 1 else 'hex_char'};\n")
+		if n_doubleSwitch >= 1:
+			f.write(f"\t\t\tdoubleSwitches : out {'hex_array(N_DOUBLESWITCHES-1 downto 0)' if n_doubleSwitch > 1 else 'hex_char'};\n")
 		f.write(f'\t\t\treset : in std_logic\n')
 		f.write(f'\t\t);\n')
 		f.write(f'\tend entity {splitter};\r\n')
 	
 		f.write(f'architecture Behavioral of {splitter} is\r\n') 
 			
-		f.write(f'\tSignal tc_s : std_logic_vector({str(n_netElements)}-1 downto 0);\n')    
-		f.write(f'\tSignal sig_s_i,sig_s_o : signals_type;\n')
-		if n_routes > 1:
-			f.write(f'\tSignal rt_s_i,rt_s_o : std_logic_vector({str(n_routes)}-1 downto 0);\n')
-		if n_routes == 1:
-			f.write(f'\tSignal rt_s_i,rt_s_o : std_logic;\n')
-		if n_levelCrossings > 1:
-			f.write(f'\tSignal lc_s_i,lc_s_o : std_logic_vector({str(n_levelCrossings)}-1 downto 0);\n')
-		if n_levelCrossings == 1:
-			f.write(f'\tSignal lc_s_i,lc_s_o : std_logic;\n')
-		if n_switches > 1:
-			f.write(f'\tSignal ssw_s_i,ssw_s_o : std_logic_vector({str(n_switches)}-1 downto 0);\n')
-		if n_switches == 1:
-			f.write(f'\tSignal ssw_s_i,ssw_s_o : std_logic;\n')
-		if n_scissorCrossings > 1:
-			f.write(f'\tSignal sc_s_i,sc_s_o : std_logic_vector({str(n_scissorCrossings)}-1 downto 0);\n')
-		if n_scissorCrossings == 1:
-			f.write(f'\tSignal sc_s_i,sc_s_o : std_logic;\n')
-		if n_doubleSwitch > 1:
-			f.write(f'\tSignal dsw_s_i,dsw_s_o : dSwitches_type;\n')
-		if n_doubleSwitch == 1:
-			f.write(f'\tSignal dsw_s_i,dsw_s_o : dSwitch_type;\n')
 		f.write(f'begin\r\n')  
 		
 		# Ocupation | Routes | signals | levelCrossings | singleSwitches | doubleSwitches | scissorCrossinges
@@ -1982,39 +1974,55 @@ class ACG():
 		f.write(f'\tbegin\n')
 		f.write(f'\t\tif (clock = \'1\' and clock\'Event) then\n')
 		f.write(f'\t\t\tif (reset = \'1\') then\n')
-		f.write(f'\t\t\t\tocupation <= "{str('0'*n_netElements)}";\n')
-		f.write(f'\t\t\t\tsignals.lsb <= "{str('0'*n_signals)}";\n')
-		f.write(f'\t\t\t\tsignals.msb <= "{str('0'*n_signals)}";\n') 
-		if n_routes > 1:
-			f.write(f'\t\t\t\troutes <= "{str('0'*n_routes)}";\n')
-		if n_routes == 1:
-			f.write(f'\t\t\t\troutes <= \'0\';\n')  
-		if n_levelCrossings > 1:
-			f.write(f'\t\t\t\tlevelCrossings <= "{str('0'*n_levelCrossings)}";\n')
-		if n_levelCrossings == 1:
-			f.write(f'\t\t\t\tlevelCrossings <= \'0\';\n')    
-		if n_switches > 1:
-			f.write(f'\t\t\t\tsingleSwitches <= "{str('0'*n_switches)}";\n')
-		if n_switches == 1:
-			f.write(f'\t\t\t\tsingleSwitches <= \'0\';\n')
-		if n_scissorCrossings > 1:
-			f.write(f'\t\t\t\tscissorCrossings <= "{str('0'*n_scissorCrossings)}";\n')
-		if n_scissorCrossings == 1:
-			f.write(f'\t\t\t\tscissorCrossings <= \'0\';\n')
-		if n_doubleSwitch > 1:
-			f.write(f'\t\t\t\tdoubleSwitches.lsb <= "{str('0'*n_doubleSwitch)}";\n')
-			f.write(f'\t\t\t\tdoubleSwitches.msb <= "{str('0'*n_doubleSwitch)}";\n')
-		if n_doubleSwitch == 1:
-			f.write(f'\t\t\t\tdoubleSwitches.lsb <= \'0\';\n')
-			f.write(f'\t\t\t\tdoubleSwitches.msb <= \'0\';\n')
+		f.write(f'\t\t\t\ttracks <= (others => \'0\');\n')
+		if n_routes >= 1:
+			f.write(f"\t\t\t\troutes <= {'(others =>' if n_routes > 1 else ''}\'0\'{');' if n_routes > 1 else ';'}\n")
+		if n_signals >= 1:
+			f.write(f"\t\t\t\tsignals <= {'(others =>' if n_signals > 1 else ''}\'0\'{');' if n_signals > 1 else ';'}\n")
+		if n_levelCrossings >= 1:
+			f.write(f"\t\t\t\tlevelCrossings <= {'(others =>' if n_levelCrossings > 1 else ''}\'0\'{');' if n_levelCrossings > 1 else ';'}\n")
+		if n_switches >= 1:
+			f.write(f"\t\t\t\tsingleSwitches <= {'(others =>' if n_switches > 1 else ''}\'0\'{');' if n_switches > 1 else ';'}\n")
+		if n_scissorCrossings >= 1:
+			f.write(f"\t\t\t\tscissorCrossings <= {'(others =>' if n_scissorCrossings > 1 else ''}\'0\'{');' if n_scissorCrossings > 1 else ';'}\n")
+		if n_doubleSwitch >= 1:
+			f.write(f"\t\t\t\tdoubleSwitches <= {'(others =>' if n_doubleSwitch > 1 else ''}\'0\'{');' if n_doubleSwitch > 1 else ';'}\n")
 		f.write(f'\t\t\t\tprocessed <= \'0\';\n')    
 		f.write(f'\t\t\telse\n')
 		f.write(f'\t\t\t\tprocessed <= processing;\n') 
 		f.write(f'\t\t\t\tif processing = \'1\' then\n')
 
+		f.write(f'\t\t\t\t\ttracks <= packet({N-1} downto {N-n_netElements});\n')
+		
+		if n_routes > 1:
+			f.write(f'\t\t\t\t\troutes <= packet({N-n_netElements-1} downto {N-n_netElements-n_routes});\n')
+		if n_routes == 1:
+			f.write(f'\t\t\t\t\troutes <= packet({N-n_netElements-1});\n')
+		if n_signals > 1:
+			f.write(f'\t\t\t\t\tsignals <= packet({N-n_netElements-n_routes-1} downto {N-n_netElements-n_routes-n_signals});\n')
+		if n_signals == 1:
+			f.write(f'\t\t\t\t\tsignals <= packet({N-n_netElements-n_routes-1});\n')	
+		if n_levelCrossings > 1:
+			f.write(f'\t\t\t\t\tlevelCrossings <= packet({N-n_netElements-n_routes-n_signals-1} downto {N-n_netElements-n_routes-n_signals-n_levelCrossings});\n')
+		if n_levelCrossings == 1:
+			f.write(f'\t\t\t\t\tlevelCrossings <= packet({N-n_netElements-n_routes-n_signals-1});\n')	
+		if n_switches > 1:
+			f.write(f'\t\t\t\t\tsingleSwitches <= packet({N-n_netElements-n_routes-n_signals-n_levelCrossings-1} downto {N-n_netElements-n_routes-n_signals-n_levelCrossings-n_switches});\n')
+		if n_switches == 1:
+			f.write(f'\t\t\t\t\tsingleSwitches <= packet({N-n_netElements-n_routes-n_signals-n_levelCrossings-1});\n')	
+		if n_doubleSwitch > 1:
+			f.write(f'\t\t\t\t\tdoubleSwitches <= packet({N-n_netElements-n_routes-n_signals-n_levelCrossings-n_switches-1} downto {N-n_netElements-n_routes-n_signals-n_levelCrossings-n_switches-n_doubleSwitch});\n')
+		if n_doubleSwitch == 1:
+			f.write(f'\t\t\t\t\tdoubleSwitches <= packet({N-n_netElements-n_routes-n_signals-n_levelCrossings-n_switches-1});\n')
+		if n_scissorCrossings > 1:
+			f.write(f'\t\t\t\t\tdoubleSwitches <= packet({N-n_netElements-n_routes-n_signals-n_levelCrossings-n_switches-n_doubleSwitch-1} downto {N-n_netElements-n_routes-n_signals-n_levelCrossings-n_switches-n_doubleSwitch-n_scissorCrossings});\n')
+		if n_scissorCrossings == 1:
+			f.write(f'\t\t\t\t\tdoubleSwitches <= packet({N-n_netElements-n_routes-n_signals-n_levelCrossings-n_switches-n_doubleSwitch-1});\n')	
+
+		'''
 		for i in range(n_netElements):
 			f.write(f'\t\t\t\t\tocupation({str(i)}) <= packet({str(N-1-i)});\n')
-	
+		
 		for i in range(n_routes):
 			f.write(f'\t\t\t\t\troutes({str(i)}) <= packet({str(N-1-n_netElements-i)});\n')
     
@@ -2038,7 +2046,6 @@ class ACG():
 		if n_switches == 1:
 			f.write(f'\t\t\t\t\tsingleSwitches <= packet({str(N-1-n_routes-n_netElements-2*n_signals-n_levelCrossings-1)});\n')
 		
-
 		if n_doubleSwitch > 1:
 			for i in range(2*n_doubleSwitch):
 				if i%2:
@@ -2056,6 +2063,7 @@ class ACG():
 				f.write(f'\t\t\t\t\tscissorCrossings({str(i)}) <= packet({str(N-1-n_routes-n_netElements-2*n_signals-n_levelCrossings-n_switches-2*n_doubleSwitch-i)});\n')
 		if n_scissorCrossings == 1:
 			f.write(f'\t\t\t\t\tscissorCrossings <= packet({str(N-1-n_routes-n_netElements-2*n_signals-n_levelCrossings-n_switches-2*n_doubleSwitch)});\n')
+		'''
 
 		f.write(f'\t\t\t\tend if;\n')    
 		f.write(f'\t\t\tend if;\n')
@@ -2080,48 +2088,42 @@ class ACG():
 		mediator = "mediator"
 		f.write(f'\tentity {mediator} is\n')
 		f.write(f'\t\tgeneric(\n')
-		f.write(f'\t\t\tN : natural := {str(N)};\n')
-		
-		f.write(f'\t\t\tN_SIGNALS : natural := {str(n_signals)};\n')
-		if n_routes > 0:
+		if n_netElements > 0:
+			f.write(f'\t\t\tN_TRACKCIRCUITS : natural := {str(n_netElements)};\n')	
+		if n_routes > 0:         
 			f.write(f'\t\t\tN_ROUTES : natural := {str(n_routes)};\n')
+		if n_signals > 0:
+			f.write(f'\t\t\tN_SIGNALS : natural := {str(n_signals)};\n')
 		if n_levelCrossings > 0:
 			f.write(f'\t\t\tN_LEVELCROSSINGS : natural := {str(n_levelCrossings)};\n')
-		if n_switches > 0:    
+		if n_switches > 0:         
 			f.write(f'\t\t\tN_SINGLESWITCHES : natural := {str(n_switches)};\n')
-		if n_doubleSwitch > 0:
-			f.write(f'\t\t\tN_DOUBLESWITCHES : natural := {str(n_doubleSwitch)};\n')
-		if n_scissorCrossings > 0:
-			f.write(f'\t\t\tN_SCISSORCROSSINGS : natural := {str(n_scissorCrossings)};\n')
-		f.write(f'\t\t\tN_TRACKCIRCUITS : natural := {str(n_netElements)}\n')    
+		if n_doubleSwitch > 0:         
+			f.write(f'\t\t\tN_DOUBLEWITCHES : natural := {str(n_doubleSwitch)};\n')
+		if n_scissorCrossings > 0:         
+			f.write(f'\t\t\tN_SCRISSORCROSSINGS : natural := {str(n_scissorCrossings)};\n')
+		f.write(f'\t\t\tN : natural := {str(N)}\n')  
+
 		f.write(f'\t\t);\n')
 		f.write(f'\t\tport(\n')
 		f.write(f'\t\t\tclock : in std_logic;\n')
 		f.write(f'\t\t\tprocessing : in std_logic;\n')
 		f.write(f'\t\t\tprocessed : out std_logic;\n')
-		f.write(f'\t\t\tsignals : in signals_type;\n')
-		if n_routes > 1:
-			f.write(f'\t\t\troutes : in std_logic_vector(N_ROUTES-1 downto 0);\n')
-		if n_routes == 1:
-			f.write(f'\t\t\troutes : in std_logic;\n')
-		if n_levelCrossings > 1:
-			f.write(f'\t\t\tlevelCrossings : in std_logic_vector(N_LEVELCROSSINGS-1 downto 0);\n')
-		if n_levelCrossings == 1:
-			f.write(f'\t\t\tlevelCrossings : in std_logic;\n')
-		if n_switches > 1:
-			f.write(f'\t\t\tsingleSwitches : in std_logic_vector(N_SINGLESWITCHES-1 downto 0);\n')
-		if n_switches == 1:
-			f.write(f'\t\t\tsingleSwitches : in std_logic;\n')
-		if n_scissorCrossings > 1:
-			f.write(f'\t\t\tscissorCrossings : in std_logic_vector(N_SCISSORCROSSINGS-1 downto 0);\n')
-		if n_scissorCrossings == 1:
-			f.write(f'\t\t\tscissorCrossings : in std_logic;\n')
-		if n_doubleSwitch > 1:
-			f.write(f'\t\t\tdoubleSwitches : in dSwitches_type;\n')
-		if n_doubleSwitch == 1:
-			f.write(f'\t\t\tdoubleSwitches : in dSwitch_type;\n')
+		f.write(f'\t\t\ttracks :  in hex_array(N_TRACKCIRCUITS-1 downto 0);\n')
+		if n_routes >= 1:
+			f.write(f"\t\t\troutes : in {'hex_array(N_ROUTES-1 downto 0)' if n_routes > 1 else 'hex_char'};\n")
+		if n_signals >= 1:
+			f.write(f"\t\t\tsignals : in {'hex_array(N_SIGNALS-1 downto 0)' if n_signals > 1 else 'hex_char'};\n")
+		if n_levelCrossings >= 1:
+			f.write(f"\t\t\tlevelCrossings : in {'hex_array(N_LEVELCROSSINGS-1 downto 0)' if n_levelCrossings > 1 else 'hex_char'};\n")
+		if n_switches >= 1:
+			f.write(f"\t\t\tsingleSwitches : in {'hex_array(N_SINGLESWITCHES-1 downto 0)' if n_switches > 1 else 'hex_char'};\n")
+		if n_scissorCrossings >= 1:
+			f.write(f"\t\t\tscissorCrossings : in {'hex_array(N_SCRISSORCROSSINGS-1 downto 0)' if n_scissorCrossings > 1 else 'hex_char'};\n")
+		if n_doubleSwitch >= 1:
+			f.write(f"\t\t\tdoubleSwitches : in {'hex_array(N_DOUBLESWITCHES-1 downto 0)' if n_doubleSwitch > 1 else 'hex_char'};\n")
 
-		f.write(f'\t\t\toutput : out std_logic_vector({str(M)}-1 downto 0);\n')
+		f.write(f'\t\t\toutput : out hex_array({str(N)}-1 downto 0);\n')
 		f.write(f'\t\t\treset : in std_logic\n')
 		f.write(f'\t\t);\n')
 		f.write(f'\tend entity {mediator};\r\n') 
@@ -2143,8 +2145,37 @@ class ACG():
 		f.write(f'\t\t\t\tprocessed <= processing;\n')
 		f.write(f'\t\t\t\tif (processing = \'1\') then\n')
 
+		f.write(f'\t\t\t\t\toutput({N-1} downto {N-n_netElements}) <= tracks;\n')
+		
+		if n_routes > 1:
+			f.write(f'\t\t\t\t\toutput({N-n_netElements-1} downto {N-n_netElements-n_routes}) <= routes;\n')
+		if n_routes == 1:
+			f.write(f'\t\t\t\t\toutput({N-n_netElements-1}) <= routes ;\n')
+		if n_signals > 1:
+			f.write(f'\t\t\t\t\toutput({N-n_netElements-n_routes-1} downto {N-n_netElements-n_routes-n_signals}) <= signals;\n')
+		if n_signals == 1:
+			f.write(f'\t\t\t\t\toutput({N-n_netElements-n_routes-1}) <= signals;\n')	
+		if n_levelCrossings > 1:
+			f.write(f'\t\t\t\t\toutput({N-n_netElements-n_routes-n_signals-1} downto {N-n_netElements-n_routes-n_signals-n_levelCrossings}) <= levelCrossings;\n')
+		if n_levelCrossings == 1:
+			f.write(f'\t\t\t\t\toutput({N-n_netElements-n_routes-n_signals-1}) <= levelCrossings;\n')	
+		if n_switches > 1:
+			f.write(f'\t\t\t\t\toutput({N-n_netElements-n_routes-n_signals-n_levelCrossings-1} downto {N-n_netElements-n_routes-n_signals-n_levelCrossings-n_switches}) <= singleSwitches;\n')
+		if n_switches == 1:
+			f.write(f'\t\t\t\t\toutput({N-n_netElements-n_routes-n_signals-n_levelCrossings-1}) <= singleSwitches;\n')	
+		if n_doubleSwitch > 1:
+			f.write(f'\t\t\t\t\toutput({N-n_netElements-n_routes-n_signals-n_levelCrossings-n_switches-1} downto {N-n_netElements-n_routes-n_signals-n_levelCrossings-n_switches-n_doubleSwitch}) <= doubleSwitches;\n')
+		if n_doubleSwitch == 1:
+			f.write(f'\t\t\t\t\toutput({N-n_netElements-n_routes-n_signals-n_levelCrossings-n_switches-1}) <= doubleSwitches;\n')
+		if n_scissorCrossings > 1:
+			f.write(f'\t\t\t\t\toutput({N-n_netElements-n_routes-n_signals-n_levelCrossings-n_switches-n_doubleSwitch-1} downto {N-n_netElements-n_routes-n_signals-n_levelCrossings-n_switches-n_doubleSwitch-n_scissorCrossings}) <= doubleSwitches;\n')
+		if n_scissorCrossings == 1:
+			f.write(f'\t\t\t\t\toutput({N-n_netElements-n_routes-n_signals-n_levelCrossings-n_switches-n_doubleSwitch-1}) <= doubleSwitches;\n')
+
+		'''
 		if n_routes > 1:
 			f.write(f'\t\t\t\t\toutput({str(n_routes-1)} downto 0) <= routes;\n')
+		
 		if n_routes == 1:
 			f.write(f'\t\t\t\t\toutput(0) <= routes;\n')
 
@@ -2180,7 +2211,7 @@ class ACG():
 			f.write(f'\t\t\t\t\toutput({str(n_routes+2*n_signals+n_levelCrossings+n_switches+2*n_doubleSwitch+n_scissorCrossings-1)} downto {str(n_routes+2*n_signals+n_levelCrossings+n_switches+2*n_doubleSwitch)}) <= scissorCrossings;\n')
 		if n_scissorCrossings == 1:
 			f.write(f'\t\t\t\t\toutput({str(n_routes+2*n_signals+n_levelCrossings++n_switches+2*n_doubleSwitch)}) <= scissorCrossings;\n')
-
+		'''
 
 		f.write(f'\t\t\t\tend if;\n')
 		f.write(f'\t\t\tend if;\n')
@@ -2212,46 +2243,46 @@ class ACG():
 		network = "network"
 		f.write(f'\tentity {network} is\n')
 		f.write(f'\t\tgeneric(\n')
-		f.write(f'\t\t\tN : natural := {str(N)};\n')
-		
-		f.write(f'\t\t\tN_SIGNALS : natural := {str(n_signals)};\n')
-		if n_routes > 0:
+		if n_netElements > 0:
+			f.write(f'\t\t\tN_TRACKCIRCUITS : natural := {str(n_netElements)};\n')	
+		if n_routes > 0:         
 			f.write(f'\t\t\tN_ROUTES : natural := {str(n_routes)};\n')
+		if n_signals > 0:
+			f.write(f'\t\t\tN_SIGNALS : natural := {str(n_signals)};\n')
 		if n_levelCrossings > 0:
 			f.write(f'\t\t\tN_LEVELCROSSINGS : natural := {str(n_levelCrossings)};\n')
-		if n_switches > 0:    
+		if n_switches > 0:         
 			f.write(f'\t\t\tN_SINGLESWITCHES : natural := {str(n_switches)};\n')
-		if n_doubleSwitch > 0:    
+		if n_doubleSwitch > 0:         
 			f.write(f'\t\t\tN_DOUBLEWITCHES : natural := {str(n_doubleSwitch)};\n')
-		if n_scissorCrossings > 0:    
-			f.write(f'\t\t\tN_SCISSORCROSSINGS : natural := {str(n_scissorCrossings)};\n')
-		f.write(f'\t\t\tN_TRACKCIRCUITS : natural := {str(n_netElements)}\n')
+		if n_scissorCrossings > 0:         
+			f.write(f'\t\t\tN_SCRISSORCROSSINGS : natural := {str(n_scissorCrossings)};\n')
+		f.write(f'\t\t\tN : natural := {str(N)}\n')  
 		f.write(f'\t\t);\n')
 		f.write(f'\t\tport(\n')
 		f.write(f'\t\t\tclock : in std_logic;\n')
 		f.write(f'\t\t\tprocessing : in std_logic;\n')
 		f.write(f'\t\t\tprocessed : out std_logic;\n')
-		f.write(f'\t\t\tocupation : in std_logic_vector(N_TRACKCIRCUITS-1 downto 0);\n') 
-		f.write(f'\t\t\tsignals_i : in signals_type;\n')
-		f.write(f'\t\t\tsignals_o : out signals_type;\n')
-		if n_routes > 0:
-			f.write(f'\t\t\troutes_i : in std_logic{"_vector(N_ROUTES-1 downto 0)" if n_routes > 1 else ""};\n')
-			f.write(f'\t\t\troutes_o : out std_logic{"_vector(N_ROUTES-1 downto 0)" if n_routes > 1 else ""};\n')
-		if n_levelCrossings > 0:
-			f.write(f'\t\t\tlevelCrossings_i : in std_logic{"_vector(N_LEVELCROSSINGS-1 downto 0)" if n_levelCrossings > 1 else ""};\n')
-			f.write(f'\t\t\tlevelCrossings_o : out std_logic{"_vector(N_LEVELCROSSINGS-1 downto 0)" if n_levelCrossings > 1 else ""};\n')
-		if n_switches > 0:
-			f.write(f'\t\t\tsingleSwitches_i : in std_logic{"_vector(N_SINGLESWITCHES-1 downto 0)" if n_switches > 1 else ""};\n')
-			f.write(f'\t\t\tsingleSwitches_o : out std_logic{"_vector(N_SINGLESWITCHES-1 downto 0)" if n_switches > 1 else ""};\n')
-		if n_scissorCrossings > 0:
-			f.write(f'\t\t\tscissorCrossings_i : in std_logic{"_vector(N_SCISSORCROSSINGS-1 downto 0)" if n_scissorCrossings > 1 else ""};\n')
-			f.write(f'\t\t\tscissorCrossings_o : out std_logic{"_vector(N_SCISSORCROSSINGS-1 downto 0)" if n_scissorCrossings > 1 else ""};\n')
-		if n_doubleSwitch > 1:
-			f.write(f'\t\t\tdoubleSwitches_i : in dSwitches_type;\n')  
-			f.write(f'\t\t\tdoubleSwitches_o : out dSwitches_type;\n')
-		if n_doubleSwitch == 1:
-			f.write(f'\t\t\tdoubleSwitches_i : in dSwitch_type;\n')  
-			f.write(f'\t\t\tdoubleSwitches_o : out dSwitch_type;\n')
+		f.write(f'\t\t\ttracks_i: in hex_array(N_TRACKCIRCUITS-1 downto 0);\n') 
+		f.write(f'\t\t\ttracks_o: out hex_array(N_TRACKCIRCUITS-1 downto 0);\n') 
+		f.write(f'\t\t\tsignals_i : in hex_array(N_SIGNALS-1 downto 0);\n')
+		f.write(f'\t\t\tsignals_o : out hex_array(N_SIGNALS-1 downto 0);\n')
+		if n_routes >= 1:
+			f.write(f"\t\t\troutes_i : in {'hex_array(N_ROUTES-1 downto 0)' if n_routes > 1 else 'hex_char'};\n")
+			f.write(f"\t\t\troutes_o : out {'hex_array(N_ROUTES-1 downto 0)' if n_routes > 1 else 'hex_char'};\n")
+		if n_levelCrossings >= 1:
+			f.write(f"\t\t\tlevelCrossings_i : in {'hex_array(N_LEVELCROSSINGS-1 downto 0)' if n_levelCrossings > 1 else 'hex_char'};\n")
+			f.write(f"\t\t\tlevelCrossings_o : out {'hex_array(N_LEVELCROSSINGS-1 downto 0)' if n_levelCrossings > 1 else 'hex_char'};\n")
+		if n_switches >= 1:
+			f.write(f"\t\t\tsingleSwitches_i : in {'hex_array(N_SINGLESWITCHES-1 downto 0)' if n_switches > 1 else 'hex_char'};\n")
+			f.write(f"\t\t\tsingleSwitches_o : out {'hex_array(N_SINGLESWITCHES-1 downto 0)' if n_switches > 1 else 'hex_char'};\n")
+		if n_scissorCrossings >= 1:	
+			f.write(f"\t\t\tscissorCrossings_i : in {'hex_array(N_SCISSORCROSSINGS-1 downto 0)' if n_switches > 1 else 'hex_char'};\n")
+			f.write(f"\t\t\tscissorCrossings_o : out {'hex_array(N_SCISSORCROSSINGS-1 downto 0)' if n_switches > 1 else 'hex_char'};\n")
+		if n_doubleSwitch >= 1:
+			f.write(f"\t\t\tdoubleSwitches_i : in {'hex_array(N_DOUBLESWITCHES-1 downto 0)' if n_doubleSwitch > 1 else 'hex_char'};\n")  
+			f.write(f"\t\t\tdoubleSwitches_o : out {'hex_array(N_DOUBLESWITCHES-1 downto 0)' if n_doubleSwitch > 1 else 'hex_char'};\n")
+
 				
 		f.write(f'\t\t\treset : in std_logic\n')
 		f.write(f'\t\t);\n')
@@ -2259,6 +2290,7 @@ class ACG():
 
 		f.write(f'architecture Behavioral of {network} is\r\n')
 
+		'''
 		levelCrossingData = self.getLevelCrossings(graph,routes)
 		#print(levelCrossingData)
 		singleSwitchData = self.getSingleSwitch(graph,routes)
@@ -2394,9 +2426,12 @@ class ACG():
 			f.write(f'\tsignal {commands} : routeCommands;\r\n')
 			commands = " , ".join([f'cmd_R{i}_{routes[i]['End']}' for i in routes])
 			f.write(f'\tsignal {commands} : routeCommands;\r\n')
-			
-		f.write(f'begin\r\n') 
+	
+		'''
 
+		f.write(f'begin\r\n') 
+		
+		'''
 		#print(list(graph.keys()))
 
 		# instantiate levelCrossings
@@ -2576,21 +2611,12 @@ class ACG():
 					f.write(f'{netElementId}_command => cmd_R{routeId}_{netElementId}, ')
 					f.write(f'{netElementId}_state => state_{netElementId}, ')
 					f.write(f'{netElementId}_lock => {netElementId}_locking, ')
-
-			
+	
 			for levelCrossingId in lc_list:
 				if levelCrossingId != None:
 					f.write(f'{levelCrossingId}_command => cmd_R{routeId}_{levelCrossingId}, ')	
 					f.write(f'{levelCrossingId}_state => state_{levelCrossingId}, ')
 					f.write(f'{levelCrossingId}_lock => {levelCrossingId}_locking, ')	
-			
-			'''
-			for levelCrossingId in routes[routeId]['LevelCrossings']:
-				f.write(f'{levelCrossingId}_command => cmd_R{routeId}_{levelCrossingId}, ')	
-				f.write(f'{levelCrossingId}_state => state_{levelCrossingId}, ')
-				f.write(f'{levelCrossingId}_lock => {levelCrossingId}_locking, ')	
-			'''	
-
 			
 			for singleSwitchId in sw_list:
 				if singleSwitchId != None:
@@ -2598,14 +2624,6 @@ class ACG():
 					f.write(f'{"s" if singleSwitchId[0].isdigit() else ""}{singleSwitchId.split('_')[0]}_state => state_{singleSwitchId.split('_')[0]}, ')
 					f.write(f'{"s" if singleSwitchId[0].isdigit() else ""}{singleSwitchId.split('_')[0]}_lock => {"s" if singleSwitchId[0].isdigit() else ""}{singleSwitchId.split('_')[0]}_locking, ')
 			
-			'''
-			for singleSwitchId in routes[routeId]['Switches']:
-				f.write(f'{"s" if singleSwitchId[0].isdigit() else ""}{singleSwitchId.split('_')[0]}_command => cmd_R{routeId}_{singleSwitchId.split('_')[0]}, ')	
-				f.write(f'{"s" if singleSwitchId[0].isdigit() else ""}{singleSwitchId.split('_')[0]}_state => state_{singleSwitchId.split('_')[0]}, ')
-				f.write(f'{"s" if singleSwitchId[0].isdigit() else ""}{singleSwitchId.split('_')[0]}_lock => {"s" if singleSwitchId[0].isdigit() else ""}{singleSwitchId.split('_')[0]}_locking, ')
-			'''
-
-
 			for scissorCrossingId in routes[routeId]['ScissorCrossings']:
 				f.write(f'{"s" if scissorCrossingId[0].isdigit() else ""}{scissorCrossingId.split('_')[0]}_command => cmd_R{routeId}_{scissorCrossingId.split('_')[0]}, ')	
 				f.write(f'{"s" if scissorCrossingId[0].isdigit() else ""}{scissorCrossingId.split('_')[0]}_state => state_{scissorCrossingId.split('_')[0]}, ')
@@ -2624,6 +2642,15 @@ class ACG():
 			f.write(f'routeState => routes_o({index}));\r\n')
 
 		f.write(f'\tprocessed <= processing;\r\n') #TODO Maybe it could be necessary to make it wait for routes locking or not.
+
+		'''
+
+		f.write(f'processed <= processing;\r\n')
+		f.write(f'tracks_o <= tracks_i;\r\n')
+		f.write(f'routes_o <= routes_i;\r\n')
+		f.write(f'signals_o <= signals_i;\r\n')
+		f.write(f'levelCrossings_o <= levelCrossings_i;\r\n')
+		f.write(f'singleSwitches_o <= singleSwitches_i;\r\n')
 
 		f.write(f'end Behavioral;') 
     
@@ -4497,7 +4524,7 @@ class ACG():
 			f.write(f'end Behavioral;') 
 			f.close()  # Close header file
     		
-	def createPrinter(self,M,example = 1):
+	def createPrinter(self,N,example = 1):
 		node = 'printer'
 		f = open(f'App/Layouts/Example_{example}/VHDL/{node}.vhd',"w+")
 		
@@ -4505,7 +4532,7 @@ class ACG():
 		self.initialComment(node,f)
 		
 		# Include library
-		self.includeLibrary(f)
+		self.includeLibrary(f,True)
 			
 		# printer entity
 		printer = 'printer'
@@ -4514,7 +4541,7 @@ class ACG():
 		f.write(f'\t\t\tclock : in std_logic;\n')
 		f.write(f'\t\t\tprocessing : in std_logic;\n')
 		f.write(f'\t\t\tprocessed : out std_logic;\n')
-		f.write(f'\t\t\tpacket_i : in std_logic_vector({str(M)}-1 downto 0);\n')
+		f.write(f'\t\t\tpacket_i : in hex_array({str(N)}-1 downto 0);\n')
 		f.write(f'\t\t\tw_data : out std_logic_vector(8-1 downto 0);\n')
 		f.write(f'\t\t\twr_uart : out std_logic; -- \'char_disp\'\n')
 		f.write(f'\t\t\treset : in std_logic\n')
@@ -4524,27 +4551,41 @@ class ACG():
 		f.write(f'architecture Behavioral of {printer} is\r\n') 
 
 		f.write(f'\ttype states_t is (RESTART,CYCLE_1,CYCLE_2);\n') 
+		f.write(f'\tsignal mux_out_s : hex_char;\n') 
 		f.write(f'\tsignal state, next_state : states_t;\n') 
-		f.write(f'\tsignal mux_out_s,ena_s,rst_s,reg_aux : std_logic;\n') 
-		f.write(f'\tsignal mux_s : std_logic_vector({str(math.ceil(np.log2(M+1)))}-1 downto 0);\r\n')  ### TODO:
+		f.write(f'\tsignal ena_s,rst_s,reg_aux : std_logic;\n') 
+		f.write(f'\tsignal mux_s : std_logic_vector({str(math.ceil(np.log2(N+1)))}-1 downto 0);\r\n')  ### TODO:
 	
+		f.write(f'\t-- Lookup table for hex_char to ASCII conversion\n')
+		f.write(f'\tconstant hex_to_ascii : ascii_packet := (\n')
+		f.write(f'\t\t\'0\' => "00110000", \'1\' => "00110001", \'2\' => "00110010", \'3\' => "00110011",\n')
+		f.write(f'\t\t\'4\' => "00110100", \'5\' => "00110101", \'6\' => "00110110", \'7\' => "00110111",\n')
+		f.write(f'\t\t\'8\' => "00111000", \'9\' => "00111001", \'A\' => "01000001", \'B\' => "01000010",\n')
+		f.write(f'\t\t\'C\' => "01000011", \'D\' => "01000100", \'E\' => "01000101", \'F\' => "01000110"\n')
+		f.write(f'\t);\n')
+		f.write(f'\t-- Function to convert mux_s to integer\n')
+		f.write(f'\tfunction mux_to_int(mux : std_logic_vector) return integer is\n')
+		f.write(f'\tbegin\n')
+		f.write(f'\t\treturn to_integer(unsigned(mux));\n')
+		f.write(f'\tend function mux_to_int;\n')
+
 		f.write(f'begin\r\n')
 		
 		f.write(f'\tcontador : process(clock)\n')
 		f.write(f'\tbegin\n')
 		f.write(f'\t\tif (clock = \'1\' and clock\'event) then\n')
 		f.write(f'\t\t\tif reset = \'1\' then\n')
-		f.write(f'\t\t\t\tmux_s <= "{str('0'*math.ceil(np.log2(M+1)))}";\n')               ### TODO:
+		f.write(f'\t\t\t\tmux_s <= "{str('0'*math.ceil(np.log2(N+1)))}";\n')               ### TODO:
 		f.write(f'\t\t\telse\n')
 		f.write(f'\t\t\t\tif (ena_s = \'1\') then\n')        
-		f.write(f'\t\t\t\t\tif (mux_s /= "{'{0:b}'.format(M)}") then\n')     ### TODO:
+		f.write(f'\t\t\t\t\tif (mux_s /= "{'{0:b}'.format(N)}") then\n')     ### TODO:
 		f.write(f'\t\t\t\t\t\tif (state = CYCLE_1 or state = CYCLE_2) then\n')
-		f.write(f'\t\t\t\t\t\t\tmux_s <= std_logic_vector(to_unsigned(to_integer(unsigned(mux_s)) + 1 , {str(math.ceil(np.log2(M+1)))}));\n')     ### TODO:     
+		f.write(f'\t\t\t\t\t\t\tmux_s <= std_logic_vector(to_unsigned(to_integer(unsigned(mux_s)) + 1 , {str(math.ceil(np.log2(N+1)))}));\n')     ### TODO:     
 		f.write(f'\t\t\t\t\t\tend if;\n')
 		f.write(f'\t\t\t\t\tend if;\n')
 		f.write(f'\t\t\t\tend if;\n')
 		f.write(f'\t\t\t\tif (processing = \'0\') then\n')
-		f.write(f'\t\t\t\t\tmux_s <= "{str('0'*math.ceil(np.log2(M+1)))}";\n')             ### TODO:
+		f.write(f'\t\t\t\t\tmux_s <= "{str('0'*math.ceil(np.log2(N+1)))}";\n')             ### TODO:
 		f.write(f'\t\t\t\tend if;\n')             
 		f.write(f'\t\t\tend if;\n') 
 		f.write(f'\t\tend if;\n')
@@ -4552,16 +4593,20 @@ class ACG():
 		
 		f.write(f'\tmultiplexor : process(packet_i,mux_s)\n')
 		f.write(f'\tbegin\n')
-		f.write(f'\t\tcase mux_s is\n')
+		#f.write(f'\t\tcase mux_s is\n')
 		
-		for i in range(M):
-			f.write(f'\t\t\twhen "{str(bin(i))[2:].zfill(math.ceil(np.log2(M+1)))}" => mux_out_s <= packet_i({str(i)});\n')
+		f.write(f'\t\tmux_out_s <= packet_i(mux_to_int(mux_s));\n')
 
-		f.write(f'\t\t\twhen others => mux_out_s <= \'0\';\n')
-		f.write(f'\t\tend case;\n')     
+		#for i in range(N):
+		#	f.write(f'\t\t\twhen "{str(bin(i))[2:].zfill(math.ceil(np.log2(N+1)))}" => mux_out_s <= packet_i({str(i)});\n')
+
+		#f.write(f'\t\t\twhen others => mux_out_s <= \'0\';\n')
+		#f.write(f'\t\tend case;\n')     
 		f.write(f'\tend process;\r\n')   
 					
-		f.write(f'\tw_data <= "00110001" when mux_out_s = \'1\' else "00110000";\r\n')
+		#f.write(f'\tw_data <= "00110001" when mux_out_s = \'1\' else "00110000";\r\n')
+
+		f.write(f'\tw_data <= hex_to_ascii(mux_out_s);\r\n')
 
 		f.write(f'\tFSM_reset : process(clock)\n') 
 		f.write(f'\tbegin\n') 
@@ -4588,7 +4633,7 @@ class ACG():
 		f.write(f'\t\t\t\tena_s <= \'0\';\n') 
 		f.write(f'\t\t\t\tprocessed <= \'0\';\n') 
 		f.write(f'\t\t\t\treg_aux <= \'0\';\n')  
-		f.write(f'\t\t\t\tif (processing = \'1\' and mux_s /= "{'{0:b}'.format(M)}" ) then\n') 
+		f.write(f'\t\t\t\tif (processing = \'1\' and mux_s /= "{'{0:b}'.format(N)}" ) then\n') 
 		f.write(f'\t\t\t\t\tnext_state <= CYCLE_1;\n') 
 		f.write(f'\t\t\t\tend if;\n') 
 		f.write(f'\t\t\twhen CYCLE_1 =>\n') 
@@ -4603,7 +4648,7 @@ class ACG():
 		f.write(f'\t\t\t\tena_s <= \'1\';\n')               
 		f.write(f'\t\t\t\tprocessed <= \'0\';\n') 
 		f.write(f'\t\t\t\treg_aux <= \'0\';\n')          
-		f.write(f'\t\t\t\tif mux_s = "{'{0:b}'.format(M-1)}" then\n') 
+		f.write(f'\t\t\t\tif mux_s = "{'{0:b}'.format(N-1)}" then\n') 
 		f.write(f'\t\t\t\t\tprocessed <= \'1\';\n') 
 		f.write(f'\t\t\t\t\treg_aux <= \'1\';\n') 
 		f.write(f'\t\t\t\t\tnext_state <= RESTART;\n')            
@@ -4742,7 +4787,7 @@ class ACG():
 		print("#"*30+' Creating VHDL files '+"#"*30)
 		
 		print(f'Creating package ... ',end='')
-		self.createPacket(n_switches,n_doubleSwitch,n_scissorCrossings,n_levelCrossings,n_signals,example)
+		self.createPacket(N,n_switches,n_doubleSwitch,n_scissorCrossings,n_levelCrossings,n_signals,example)
 		print(f'Done')
 		
 		print(f'Creating global wrapper ... ',end='')
@@ -4778,7 +4823,7 @@ class ACG():
 		print(f'Done')
 	
 		print(f'Creating printer ... ',end='')
-		self.createPrinter(M,example)
+		self.createPrinter(N,example)
 		print(f'Done')
 		
 		print(f'Creating selector ... ',end='')
