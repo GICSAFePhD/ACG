@@ -1999,32 +1999,32 @@ class ACG():
 		
 		f.write(f'\t\tif processing = \'1\' then\n')
 
-		f.write(f'\t\t\ttracks <= packet({N-1} downto {N-n_netElements});\n')
+		f.write(f'\t\t\ttracks <= packet({n_netElements-1} downto 0);\n')
 		
 		if n_routes > 1:
-			f.write(f'\t\t\troutes <= packet({N-n_netElements-1} downto {N-n_netElements-n_routes});\n')
+			f.write(f'\t\t\troutes <= packet({n_netElements+n_routes-1} downto {n_netElements});\n')
 		if n_routes == 1:
-			f.write(f'\t\t\troutes <= packet({N-n_netElements-1});\n')
+			f.write(f'\t\t\troutes <= packet({n_netElements+n_routes-1});\n')
 		if n_signals > 1:
-			f.write(f'\t\t\tsignals <= packet({N-n_netElements-n_routes-1} downto {N-n_netElements-n_routes-n_signals});\n')
+			f.write(f'\t\t\tsignals <= packet({n_signals+n_netElements+n_routes-1} downto {n_netElements+n_routes});\n')
 		if n_signals == 1:
-			f.write(f'\t\t\tsignals <= packet({N-n_netElements-n_routes-1});\n')	
+			f.write(f'\t\t\tsignals <= packet({n_signals+n_netElements+n_routes-1});\n')	
 		if n_levelCrossings > 1:
-			f.write(f'\t\t\tlevelCrossings <= packet({N-n_netElements-n_routes-n_signals-1} downto {N-n_netElements-n_routes-n_signals-n_levelCrossings});\n')
+			f.write(f'\t\t\tlevelCrossings <= packet({n_levelCrossings+n_signals+n_netElements+n_routes-1} downto {n_signals+n_netElements+n_routes});\n')
 		if n_levelCrossings == 1:
-			f.write(f'\t\t\tlevelCrossings <= packet({N-n_netElements-n_routes-n_signals-1});\n')	
+			f.write(f'\t\t\tlevelCrossings <= packet({n_levelCrossings+n_signals+n_netElements+n_routes-1});\n')	
 		if n_switches > 1:
-			f.write(f'\t\t\tsingleSwitches <= packet({N-n_netElements-n_routes-n_signals-n_levelCrossings-1} downto {N-n_netElements-n_routes-n_signals-n_levelCrossings-n_switches});\n')
+			f.write(f'\t\t\tsingleSwitches <= packet({n_switches+n_levelCrossings+n_signals+n_netElements+n_routes-1} downto {n_levelCrossings+n_signals+n_netElements+n_routes});\n')
 		if n_switches == 1:
-			f.write(f'\t\t\tsingleSwitches <= packet({N-n_netElements-n_routes-n_signals-n_levelCrossings-1});\n')	
+			f.write(f'\t\t\tsingleSwitches <= packet({n_switches+n_levelCrossings+n_signals+n_netElements+n_routes-1});\n')	
 		if n_doubleSwitch > 1:
-			f.write(f'\t\t\tdoubleSwitches <= packet({N-n_netElements-n_routes-n_signals-n_levelCrossings-n_switches-1} downto {N-n_netElements-n_routes-n_signals-n_levelCrossings-n_switches-n_doubleSwitch});\n')
+			f.write(f'\t\t\tdoubleSwitches <= packet({n_doubleSwitch+n_switches+n_levelCrossings+n_signals+n_netElements+n_routes-1} downto {n_switches+n_levelCrossings+n_signals+n_netElements+n_routes});\n')
 		if n_doubleSwitch == 1:
-			f.write(f'\t\t\t\tdoubleSwitches <= packet({N-n_netElements-n_routes-n_signals-n_levelCrossings-n_switches-1});\n')
+			f.write(f'\t\t\t\tdoubleSwitches <= packet({n_doubleSwitch+n_switches+n_levelCrossings+n_signals+n_netElements+n_routes-1});\n')
 		if n_scissorCrossings > 1:
-			f.write(f'\t\t\tdoubleSwitches <= packet({N-n_netElements-n_routes-n_signals-n_levelCrossings-n_switches-n_doubleSwitch-1} downto {N-n_netElements-n_routes-n_signals-n_levelCrossings-n_switches-n_doubleSwitch-n_scissorCrossings});\n')
+			f.write(f'\t\t\tdoubleSwitches <= packet({n_scissorCrossings+n_doubleSwitch+n_switches+n_levelCrossings+n_signals+n_netElements+n_routes-1} downto {n_doubleSwitch+n_switches+n_levelCrossings+n_signals+n_netElements+n_routes});\n')
 		if n_scissorCrossings == 1:
-			f.write(f'\t\t\tdoubleSwitches <= packet({N-n_netElements-n_routes-n_signals-n_levelCrossings-n_switches-n_doubleSwitch-1});\n')	
+			f.write(f'\t\t\tdoubleSwitches <= packet({n_scissorCrossings+n_doubleSwitch+n_switches+n_levelCrossings+n_signals+n_netElements+n_routes-1});\n')	
 
 		f.write(f'\t\tend if;\n')
 		f.write(f'\tend process;\r\n')    
@@ -2082,7 +2082,7 @@ class ACG():
 		if n_doubleSwitch >= 1:
 			f.write(f"\t\t\tdoubleSwitches : in {'hex_array(N_DOUBLESWITCHES-1 downto 0)' if n_doubleSwitch > 1 else 'hex_char'};\n")
 
-		f.write(f'\t\t\toutput : out hex_array({str(N)}-1 downto 0);\n')
+		f.write(f'\t\t\toutput : out hex_array(N-1 downto 0);\n')
 		f.write(f'\t\t\treset : in std_logic\n')
 		f.write(f'\t\t);\n')
 		f.write(f'\tend entity {mediator};\r\n') 
@@ -2098,32 +2098,32 @@ class ACG():
 		
 		f.write(f'\t\tif (processing = \'1\') then\n')
 
-		f.write(f'\t\t\toutput({N-1} downto {N-n_netElements}) <= tracks;\n')
+		f.write(f'\t\t\toutput({n_netElements-1} downto 0) <= tracks;\n')
 		
 		if n_routes > 1:
-			f.write(f'\t\t\toutput({N-n_netElements-1} downto {N-n_netElements-n_routes}) <= routes;\n')
+			f.write(f'\t\t\toutput({n_routes+n_netElements-1} downto {n_netElements}) <= routes;\n')
 		if n_routes == 1:
-			f.write(f'\t\t\toutput({N-n_netElements-1}) <= routes ;\n')
+			f.write(f'\t\t\toutput({n_routes+n_netElements-1}) <= routes ;\n')
 		if n_signals > 1:
-			f.write(f'\t\t\toutput({N-n_netElements-n_routes-1} downto {N-n_netElements-n_routes-n_signals}) <= signals;\n')
+			f.write(f'\t\t\toutput({n_signals+n_netElements+n_routes-1} downto {n_netElements+n_routes}) <= signals;\n')
 		if n_signals == 1:
-			f.write(f'\t\t\toutput({N-n_netElements-n_routes-1}) <= signals;\n')	
+			f.write(f'\t\t\toutput({n_signals+n_netElements+n_routes-1}) <= signals;\n')	
 		if n_levelCrossings > 1:
-			f.write(f'\t\t\toutput({N-n_netElements-n_routes-n_signals-1} downto {N-n_netElements-n_routes-n_signals-n_levelCrossings}) <= levelCrossings;\n')
+			f.write(f'\t\t\toutput({n_levelCrossings+n_signals+n_routes+n_netElements-1} downto {n_signals+n_routes+n_netElements}) <= levelCrossings;\n')
 		if n_levelCrossings == 1:
-			f.write(f'\t\t\toutput({N-n_netElements-n_routes-n_signals-1}) <= levelCrossings;\n')	
+			f.write(f'\t\t\toutput({n_levelCrossings+n_signals+n_routes+n_netElements-1}) <= levelCrossings;\n')	
 		if n_switches > 1:
-			f.write(f'\t\t\toutput({N-n_netElements-n_routes-n_signals-n_levelCrossings-1} downto {N-n_netElements-n_routes-n_signals-n_levelCrossings-n_switches}) <= singleSwitches;\n')
+			f.write(f'\t\t\toutput({n_switches+n_levelCrossings+n_signals+n_routes+n_netElements-1} downto {n_levelCrossings+n_signals+n_routes+n_netElements}) <= singleSwitches;\n')
 		if n_switches == 1:
-			f.write(f'\t\t\toutput({N-n_netElements-n_routes-n_signals-n_levelCrossings-1}) <= singleSwitches;\n')	
+			f.write(f'\t\t\toutput({n_switches+n_levelCrossings+n_signals+n_routes+n_netElements-1}) <= singleSwitches;\n')	
 		if n_doubleSwitch > 1:
-			f.write(f'\t\t\toutput({N-n_netElements-n_routes-n_signals-n_levelCrossings-n_switches-1} downto {N-n_netElements-n_routes-n_signals-n_levelCrossings-n_switches-n_doubleSwitch}) <= doubleSwitches;\n')
+			f.write(f'\t\t\toutput({n_doubleSwitch+n_switches+n_levelCrossings+n_signals+n_routes+n_netElements-1} downto {n_switches+n_levelCrossings+n_signals+n_routes+n_netElements}) <= doubleSwitches;\n')
 		if n_doubleSwitch == 1:
-			f.write(f'\t\t\toutput({N-n_netElements-n_routes-n_signals-n_levelCrossings-n_switches-1}) <= doubleSwitches;\n')
+			f.write(f'\t\t\toutput({n_doubleSwitch+n_switches+n_levelCrossings+n_signals+n_routes+n_netElements-1}) <= doubleSwitches;\n')
 		if n_scissorCrossings > 1:
-			f.write(f'\t\t\toutput({N-n_netElements-n_routes-n_signals-n_levelCrossings-n_switches-n_doubleSwitch-1} downto {N-n_netElements-n_routes-n_signals-n_levelCrossings-n_switches-n_doubleSwitch-n_scissorCrossings}) <= doubleSwitches;\n')
+			f.write(f'\t\t\toutput({n_scissorCrossings+n_doubleSwitch+n_switches+n_levelCrossings+n_signals+n_routes+n_netElements-1} downto {n_doubleSwitch+n_switches+n_levelCrossings+n_signals+n_routes+n_netElements}) <= doubleSwitches;\n')
 		if n_scissorCrossings == 1:
-			f.write(f'\t\t\toutput({N-n_netElements-n_routes-n_signals-n_levelCrossings-n_switches-n_doubleSwitch-1}) <= doubleSwitches;\n')
+			f.write(f'\t\t\toutput({n_scissorCrossings+n_doubleSwitch+n_switches+n_levelCrossings+n_signals+n_routes+n_netElements-1}) <= doubleSwitches;\n')
 
 		f.write(f'\t\tend if;\n')
 		f.write(f'\tend process;\r\n')   
@@ -2853,14 +2853,14 @@ class ACG():
 			f.write(f'begin\n')
 			f.write(f'\tclock_in(0) <= clock;\r\n')
 			f.write(f'\t-- Assign the last 2 bits of indication to lockState\n')
-			f.write(f"\tlockStateIn <= objectLock'val(to_integer(unsigned(hex_to_slv(indication)(2 to 3))));\n")
+			f.write(f"\tlockStateIn <= objectLock'val(to_integer(unsigned(hex_to_slv(indication)(1 to 0))));\n")
 
 			f.write(f'\t-- Assign the first 2 bits of indication to positionState\n')
-			f.write(f"\tpositionStateIn <= levelCrossingStates'val(to_integer(unsigned(hex_to_slv(indication)(0 to 1))));\n")
+			f.write(f"\tpositionStateIn <= levelCrossingStates'val(to_integer(unsigned(hex_to_slv(indication)(2 to 3))));\n")
 
 			f.write(f'\t-- Assign the last 2 bits of track_x to x_state\n')
 			for neighbour in data['Neighbour']:
-				f.write(f"\t{neighbour}_state <= nodeStates'val(to_integer(unsigned(hex_to_slv(track_{neighbour})(0 to 0))));\n")
+				f.write(f"\t{neighbour}_state <= nodeStates'val(to_integer(unsigned(hex_to_slv(track_{neighbour})(2 to 3))));\n")
 
 			f.write(f'\t-- Update command based on the values of positionStateOut and lockStateOut\n')
 			f.write(f"\tcommand <= slv_to_hex(std_logic_vector(to_unsigned(objectLock'pos(lockStateOut), 2) & to_unsigned(levelCrossingStates'pos(positionStateOut), 2)));\n")
@@ -4092,10 +4092,10 @@ class ACG():
 			f.write(f'begin\n')
 
 			f.write(f'\t-- Assign the last 2 bits of track_i to lock_state\n')
-			f.write(f"\t--lock_state <= objectLock'val(to_integer(unsigned(hex_to_slv(track_i)(2 to 3))));\n")
+			f.write(f"\t--lock_state <= objectLock'val(to_integer(unsigned(hex_to_slv(track_i)(1 to 0))));\n")
 
 			f.write(f'\t-- Assign the first 2 bits of track_i to track_state\n')
-			f.write(f"\ttrack_state <= nodeStates'val(to_integer(unsigned(hex_to_slv(track_i)(0 to 0))));\n")
+			f.write(f"\ttrack_state <= nodeStates'val(to_integer(unsigned(hex_to_slv(track_i)(2 to 3))));\n")
 
 			f.write(f'\t-- Update track_i based on the values of track_state and lock_state\n')
 			f.write(f"\ttrack_o <= slv_to_hex(std_logic_vector(to_unsigned(objectLock'pos(lock_state), 2) & to_unsigned(nodeStates'pos(track_state), 2)));\n")
