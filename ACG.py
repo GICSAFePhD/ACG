@@ -2251,7 +2251,7 @@ class ACG():
 				index = list(singleSwitchData.keys()).index(singleSwitchId)
 				self.createSingleSwitch(index,singleSwitchId,singleSwitchData[singleSwitchId],mode = 'component',f = f)
 				self.createSingleSwitch(index,singleSwitchId,singleSwitchData[singleSwitchId],mode = 'entity',f = None, example = example)
-		'''
+		
 		# component scissorCrossing  
 		if n_scissorCrossings > 0:  	
 			for scissorCrossingId in scissorCrossingData:
@@ -2270,14 +2270,12 @@ class ACG():
 				index = list(signalData.keys()).index(signalId)
 				self.createSignal(index,signalId,signalData,mode = 'component',f = f)
 				self.createSignal(index,signalId,signalData,mode = 'entity',f = None, example = example)
-		'''
 		# component node
 		if n_netElements > 0:
 			for netElementId in list(graph.keys()):
 				index = list(graph.keys()).index(netElementId)
 				self.createNode(index,netElementId,routes,mode = 'component',f = f)
 				self.createNode(index,netElementId,routes,mode = 'entity',f = None, example = example)
-		'''
 		# component route
 		if n_routes > 0:
 			for routeId in list(routes.keys()):
@@ -2285,33 +2283,23 @@ class ACG():
 				index = list(routes.keys()).index(routeId)
 				self.createRoute(index,routes[routeId],levelCrossingData,singleSwitchData,mode = 'component',f = f)
 				self.createRoute(index,routes[routeId],levelCrossingData,singleSwitchData,mode = 'entity',f = None, example = example)
-		'''
 
 		# intersignals
 		if n_levelCrossings > 0:
 			levelCrossings = " , ".join([f'state_{i}' for i in list(levelCrossingData.keys())])
 			f.write(f'\tsignal {levelCrossings} : hex_char;\n')
-		
 		if n_switches > 0: 
 			singleSwitches = " , ".join([f'state_{i}' for i in list(singleSwitchData.keys())])
 			f.write(f'\tsignal {singleSwitches} : hex_char;\n')
-		'''
 		if n_scissorCrossings > 0:
 			scissorCrossings = " , ".join([f'state_{i}' for i in list(scissorCrossingData.keys())])
-			f.write(f'\tsignal {scissorCrossings} : scissorCrossingStates;\n')
-			scissorCrossings = " , ".join([f'{"s" if i[0].isdigit() else ""}{i}_locking' for i in list(scissorCrossingData.keys())])
-			f.write(f'\tsignal {scissorCrossings} : objectLock;\n')
+			f.write(f'\tsignal {scissorCrossings} : hex_char;\n')
 		if n_doubleSwitch > 0: 
 			doubleSwitches = " , ".join([f'state_{i}' for i in list(doubleSwitchData.keys())])
-			f.write(f'\tsignal {doubleSwitches} : doubleSwitchStates;\n')
-			doubleSwitches = " , ".join([f'{"s" if i[0].isdigit() else ""}{i}_locking' for i in list(doubleSwitchData.keys())])
-			f.write(f'\tsignal {doubleSwitches} : objectLock;\n')
+			f.write(f'\tsignal {doubleSwitches} : hex_char;\n')
 		if n_signals > 0: 
 			signals = " , ".join([f'state_{i}' for i in list(signalData.keys())])
-			f.write(f'\tsignal {signals} : signalStates;\n')
-			signals = " , ".join([f'{i}_locking' for i in list(signalData.keys())])
-			f.write(f'\tsignal {signals} : objectLock;\n')
-		'''
+			f.write(f'\tsignal {signals} : hex_char;\n')
 		
 		if n_netElements > 0:
 			commands = " , ".join([f'cmd_R{i}_{j}' for i in routes for j in routes[i]['Path']])
@@ -2324,17 +2312,16 @@ class ACG():
 		if n_switches+n_doubleSwitch > 0: 
 			commands = " , ".join([f'cmd_{rt}_{sw}' for sw in singleSwitchData for rt in singleSwitchData[sw]['Routes']])
 			f.write(f'\tsignal {commands} : routeCommands := RELEASE;\n')
-		'''
+
 		if n_scissorCrossings > 0:
 			commands = " , ".join([f'cmd_R{i}_{j.split('_')[0]}' for i in routes for j in routes[i]['ScissorCrossings']])
-			f.write(f'\tsignal {commands} : routeCommands;\n')
+			f.write(f'\tsignal {commands} : routeCommands := RELEASE;\n')
 		if n_signals > 0: 
 			commands = " , ".join([f'cmd_R{i}_{routes[i]['Start']}' for i in routes])
-			f.write(f'\tsignal {commands} : routeCommands;\r\n')
+			f.write(f'\tsignal {commands} : routeCommands := RELEASE;\r\n')
 			commands = " , ".join([f'cmd_R{i}_{routes[i]['End']}' for i in routes])
-			f.write(f'\tsignal {commands} : routeCommands;\r\n')
-		'''
-
+			f.write(f'\tsignal {commands} : routeCommands := RELEASE;\r\n')
+	
 		f.write(f'begin\r\n') 
 		
 		#print(list(graph.keys()))
@@ -3547,8 +3534,6 @@ class ACG():
 			for element in range(len(data[name]['Routes'])):
 				f.write(f'\t\t\t{data[name]['Routes'][element]}_command : in routeCommands;\n')
 				commands.append(data[name]['Routes'][element])
-				#if data['Position'][element] == 'NN':
-				#	commands_NN.append(data['Routes'][element])
 
 		ocupationLevel_0,ocupationLevel_1,ocupationLevel_2,signal_0,signal_1,signal_2,switches_1,switches_2,paths = self.getSignalGraph(name,data)
 		
@@ -3559,28 +3544,27 @@ class ACG():
 					if i != [] and i not in lc_string:
 						lc_string.append(i) 
 		for i in lc_string:
-			f.write(f'\t\t\t{i}_state : in levelCrossingStates;\r\n')
+			f.write(f'\t\t\t{i}_state : in hex_char;\r\n')
 
 		f.write(f'\t\t\t--Ocupation level 0\n')	
-		f.write(f'\t\t\tocupation_{ocupationLevel_0} : in std_logic;\n')	
-		f.write(f'\t\t\tcorrespondence_{signal_0} : out signalStates := RED;\n')
-		f.write(f'\t\t\tlock_{name} : out objectLock := RELEASED;\n')
+		f.write(f'\t\t\ttrack_{ocupationLevel_0} : in hex_char;\n')	
+		f.write(f'\t\t\tcorrespondence_{signal_0} : out hex_char;\n')
 
 		sw_string_1 = []
 		if len(ocupationLevel_1) > 0:
 			f.write(f'\t\t\t--Ocupation level 1\n')	
 			for i in ocupationLevel_1:
 				if i != ocupationLevel_0:
-					f.write(f'\t\t\tocupation_{i} : in std_logic;\n')	
+					f.write(f'\t\t\ttrack_{i} : in hex_char;\n')	
 		if len(signal_1) > 0:
 			for j in signal_1:
 				if j != signal_0:
-					f.write(f'\t\t\tcorrespondence_{j} : in signalStates;\n')
+					f.write(f'\t\t\tcorrespondence_{j} : in hex_char;\n')
 		if len(switches_1) > 0:
 			for k in switches_1:
-				switc_type = 'singleSwitchStates' if len(k.split('_')[1]) == 1 else ('doubleSwitchStates' if 'X' not in k.split('_')[1] else 'scissorCrossingStates')
-				if f'\t\t\t{"s" if k[0].isdigit() else ""}{k.split('_')[0]}_state : in {switc_type};\n' not in sw_string_1:
-					sw_string_1.append(f'\t\t\t{"s" if k[0].isdigit() else ""}{k.split('_')[0]}_state : in {switc_type};\n')
+				#switc_type = 'singleSwitchStates' if len(k.split('_')[1]) == 1 else ('doubleSwitchStates' if 'X' not in k.split('_')[1] else 'scissorCrossingStates')
+				if f'\t\t\t{"s" if k[0].isdigit() else ""}{k.split('_')[0]}_state : in hex_char;\n' not in sw_string_1:
+					sw_string_1.append(f'\t\t\t{"s" if k[0].isdigit() else ""}{k.split('_')[0]}_state : in hex_char;\n')
 			for aux in sw_string_1:
 				f.write(aux)
 
@@ -3589,16 +3573,16 @@ class ACG():
 			f.write(f'\t\t\t--Ocupation level 2\n')	
 			for i in ocupationLevel_2:
 				if i != ocupationLevel_0 and i not in ocupationLevel_1:
-					f.write(f'\t\t\tocupation_{i} : in std_logic;\n')	
+					f.write(f'\t\t\ttrack_{i} : in hex_char;\n')	
 		if len(signal_2) > 0:
 			for j in signal_2:
 				if j != signal_0 and j not in signal_1:
-					f.write(f'\t\t\tcorrespondence_{j} : in signalStates;\n')
+					f.write(f'\t\t\tcorrespondence_{j} : in hex_char;\n')
 		if len(switches_2) > 0:
 			for k in switches_2:
-				switc_type = 'singleSwitchStates' if len(k.split('_')[1]) == 1 else ('doubleSwitchStates' if 'X' not in k.split('_')[1] else 'scissorCrossingStates')
-				if f'\t\t\t{"s" if k[0].isdigit() else ""}{k.split('_')[0]}_state : in {switc_type};\n' not in sw_string_2:
-					sw_string_2.append(f'\t\t\t{"s" if k[0].isdigit() else ""}{k.split('_')[0]}_state : in {switc_type};\n')
+				#switc_type = 'singleSwitchStates' if len(k.split('_')[1]) == 1 else ('doubleSwitchStates' if 'X' not in k.split('_')[1] else 'scissorCrossingStates')
+				if f'\t\t\t{"s" if k[0].isdigit() else ""}{k.split('_')[0]}_state : in hex_char;\n' not in sw_string_2:
+					sw_string_2.append(f'\t\t\t{"s" if k[0].isdigit() else ""}{k.split('_')[0]}_state : in hex_char;\n')
 			for aux in sw_string_2:
 				if sw_string_1 == []:
 					f.write(aux)
@@ -3606,8 +3590,8 @@ class ACG():
 					if aux not in sw_string_1:
 						f.write(aux)
 
-		f.write(f'\t\t\tindication : in signal_type;\n')
-		f.write(f'\t\t\tcommand : out signal_type\n')
+		f.write(f'\t\t\tindication : in hex_char;\n')
+		f.write(f'\t\t\tcommand : out hex_char\n')
 		
 		f.write(f'\t\t);\n')
 		f.write(f'\tend {mode} {railwaySignal};\n')
@@ -3623,7 +3607,7 @@ class ACG():
 
 			route_cmds = ",".join([f'{i}_command' for i in commands])
 
-			freq = 10e6
+			freq = 120e9
 			timeout = 7
 
 			FF = math.ceil(math.log2(timeout*freq))
@@ -3640,29 +3624,171 @@ class ACG():
 
 			f.write(f'architecture Behavioral of {node} is\n')
 
-			f.write(f'\tcomponent flipFlop is\n')
-			f.write(f'\t\tport(\n')
-			f.write(f'\t\t\tclock : in std_logic;\n')
-			f.write(f'\t\t\treset : in std_logic;\n')
-			f.write(f'\t\t\tQ : out std_logic\n')
-			f.write(f'\t\t);\n')
-			f.write(f'\tend component flipFlop;\n')
+			f.write(f'\tcomponent flipFlop is\r\n')
+			f.write(f'\t\tport(\r\n')
+			f.write(f'\t\t\tclock : in std_logic := \'0\';\r\n')
+			f.write(f'\t\t\treset : in std_logic := \'0\';\r\n')
+			f.write(f'\t\t\tQ : out std_logic := \'0\'\r\n')
+			f.write(f'\t\t);\r\n')
+			f.write(f'\tend component flipFlop;\r\n')
 
 			f.write(f'\tsignal restart : std_logic := \'0\';\n')
 			f.write(f'\tsignal Q : std_logic_vector({FF} downto 0) := (others => \'0\');\n')
-			f.write(f'\tsignal commandState : routeCommands := RELEASE;\n')
-			f.write(f'\tsignal aspectState : signalStates := RED ;\n')
-			f.write(f'\tsignal commandAux : signal_type;\n')
-			f.write(f'\tsignal path : integer := 0;\n')
+			f.write(f'\tsignal clock_in : std_logic_vector({FF} downto 0) := (others => \'0\');\n')
 			f.write(f'\tsignal timeout : std_logic := \'0\';\n')
+
+			f.write(f'\tsignal commandState : routeCommands := RELEASE;\n')
+			f.write(f'\tsignal path : integer := 0;\n')
+
+
+			f.write(f'\tsignal aspectState : signalStates := RED;\n')
 			
+			lc_string = []
+			for path in paths:
+				if 'LevelCrossings' in paths[path]:
+					for i in paths[path]['LevelCrossings']:
+						if i != [] and i not in lc_string:
+							lc_string.append(i) 
+			for i in lc_string:
+				f.write(f'\tsignal {i}_position : levelCrossingStates := UP;\n')	
+				f.write(f'\tsignal {i}_lock : objectLock := RELEASED;\n')	
+
+			sw_string_1A = []
+			sw_string_1B = []
+			if len(ocupationLevel_1) > 0:
+				f.write(f'\t--Ocupation level 1\n')	
+				for i in ocupationLevel_1:
+					if i != ocupationLevel_0:
+						f.write(f'\tsignal {i}_state : nodeStates := FREE;\n')	
+						f.write(f'\tsignal {i}_lock : objectLock := RELEASED;\n')	
+			if len(signal_1) > 0:
+				for j in signal_1:
+					if j != signal_0:
+						f.write(f'\tsignal {j}_position : signalStates;\n')
+						f.write(f'\tsignal {j}_lock : objectLock := RELEASED;\n')	
+			if len(switches_1) > 0:
+				for k in switches_1:
+					if f'\tsignal {"s" if k[0].isdigit() else ""}{k.split('_')[0]}_position : singleSwitchStates := NORMAL;\n' not in sw_string_1A:
+						sw_string_1A.append(f'\tsignal {"s" if k[0].isdigit() else ""}{k.split('_')[0]}_position : singleSwitchStates := NORMAL;\n')
+					if f'\tsignal {"s" if k[0].isdigit() else ""}{k.split('_')[0]}_lock : objectLock := RELEASED;\n' not in sw_string_1B:
+						sw_string_1B.append(f'\tsignal {"s" if k[0].isdigit() else ""}{k.split('_')[0]}_lock : objectLock := RELEASED;\n')
+				for aux in sw_string_1A:
+					f.write(aux)
+				for aux in sw_string_1B:
+					f.write(aux)
+
+			sw_string_2A = []
+			sw_string_2B = []
+			if len(ocupationLevel_2) > 0:
+				f.write(f'\t--Ocupation level 2\n')	
+				for i in ocupationLevel_2:
+					if i != ocupationLevel_0 and i not in ocupationLevel_1:
+						f.write(f'\tsignal {i}_state : nodeStates := FREE;\n')	
+						f.write(f'\tsignal {i}_lock : objectLock := RELEASED;\n')	
+			if len(signal_2) > 0:
+				for j in signal_2:
+					if j != signal_0 and j not in signal_1:
+						f.write(f'\tsignal {j}_position : signalStates;\n')
+						f.write(f'\tsignal {j}_lock : objectLock := RELEASED;\n')	
+			if len(switches_2) > 0:
+				for k in switches_2:
+					if f'\tsignal {"s" if k[0].isdigit() else ""}{k.split('_')[0]}_position : singleSwitchStates := NORMAL;\n' not in sw_string_2A:
+						sw_string_2A.append(f'\tsignal {"s" if k[0].isdigit() else ""}{k.split('_')[0]}_position : singleSwitchStates := NORMAL;\n')
+					if f'\tsignal {"s" if k[0].isdigit() else ""}{k.split('_')[0]}_lock : objectLock := RELEASED;\n' not in sw_string_2B:
+						sw_string_2B.append(f'\tsignal {"s" if k[0].isdigit() else ""}{k.split('_')[0]}_lock : objectLock := RELEASED;\n')
+				for aux in sw_string_2A:
+					if sw_string_1A == []:
+						f.write(aux)
+					else:	
+						if aux not in sw_string_1A:
+							f.write(aux)
+				
+				for aux in sw_string_2B:
+					if sw_string_1B == []:
+						f.write(aux)
+					else:	
+						if aux not in sw_string_1B:
+							f.write(aux)
+
 			f.write(f'begin\n')
-			
+			f.write(f'\tclock_in(0) <= clock;\r\n')
+
+			lc_string = []
+			for path in paths:
+				if 'LevelCrossings' in paths[path]:
+					for i in paths[path]['LevelCrossings']:
+						if i != [] and i not in lc_string:
+							lc_string.append(i) 
+			for i in lc_string:
+				f.write(f"\t{i}_position <= levelCrossingStates'val(to_integer(unsigned(hex_to_slv({i}_state)(2 to 3))));\n")
+				f.write(f"\t{i}_lock <= objectLock'val(to_integer(unsigned(hex_to_slv({i}_state)(1 to 0))));\n")
+			sw_string_1A = []
+			sw_string_1B = []
+			if len(ocupationLevel_1) > 0:
+				f.write(f'\t--Ocupation level 1\n')	
+				for i in ocupationLevel_1:
+					if i != ocupationLevel_0:
+						f.write(f"\t{i}_state <= nodeStates'val(to_integer(unsigned(hex_to_slv(track_{i})(2 to 3))));\n")
+						f.write(f"\t{i}_lock <= objectLock'val(to_integer(unsigned(hex_to_slv(track_{i})(1 to 0))));\n")
+			if len(signal_1) > 0:
+				for j in signal_1:
+					if j != signal_0:
+						f.write(f"\t{j}_position <= signalStates'val(to_integer(unsigned(hex_to_slv(correspondence_{j})(2 to 3))));\n")
+						f.write(f"\t{j}_lock <= objectLock'val(to_integer(unsigned(hex_to_slv(correspondence_{j})(1 to 0))));\n")
+			if len(switches_1) > 0:
+				for k in switches_1:
+					sw = f'{"s" if k[0].isdigit() else ""}{k.split('_')[0]}'
+					condition1 = f"\t{sw}_position <= singleSwitchStates'val(to_integer(unsigned(hex_to_slv({sw}_state)(2 to 3))));\n"
+					condition2 = f"\t{sw}_lock <= objectLock'val(to_integer(unsigned(hex_to_slv({sw}_state)(1 to 0))));\n"
+					if condition1 not in sw_string_1A:
+						sw_string_1A.append(condition1)
+					if condition2 not in sw_string_1B:
+						sw_string_1B.append(condition2)
+				for aux in sw_string_1A:
+					f.write(aux)
+				for aux in sw_string_1B:
+					f.write(aux)
+
+			sw_string_2A = []
+			sw_string_2B = []
+			if len(ocupationLevel_2) > 0:
+				f.write(f'\t--Ocupation level 2\n')	
+				for i in ocupationLevel_2:
+					if i != ocupationLevel_0 and i not in ocupationLevel_1:
+						f.write(f"\t{i}_state <= nodeStates'val(to_integer(unsigned(hex_to_slv(track_{i})(2 to 3))));\n")
+						f.write(f"\t{i}_lock <= objectLock'val(to_integer(unsigned(hex_to_slv(track_{i})(1 to 0))));\n")
+			if len(signal_2) > 0:
+				for j in signal_2:
+					if j != signal_0 and j not in signal_1:
+						f.write(f"\t{j}_position <= signalStates'val(to_integer(unsigned(hex_to_slv(correspondence_{j})(2 to 3))));\n")
+						f.write(f"\t{j}_lock <= objectLock'val(to_integer(unsigned(hex_to_slv(correspondence_{j})(1 to 0))));\n")
+			if len(switches_2) > 0:
+				for k in switches_2:
+					sw = f'{"s" if k[0].isdigit() else ""}{k.split('_')[0]}'
+					condition1 = f"\t{sw}_position <= singleSwitchStates'val(to_integer(unsigned(hex_to_slv({sw}_state)(2 to 3))));\n"
+					condition2 = f"\t{sw}_lock <= objectLock'val(to_integer(unsigned(hex_to_slv({sw}_state)(1 to 0))));\n"
+					if condition1 not in sw_string_2A:
+						sw_string_2A.append(condition1)
+					if condition2 not in sw_string_2B:
+						sw_string_2B.append(condition2)
+
+				for aux in sw_string_2A:
+					if sw_string_1A == []:
+						f.write(aux)
+					else:	
+						if aux not in sw_string_1A:
+							f.write(aux)
+				
+				for aux in sw_string_2B:
+					if sw_string_1B == []:
+						f.write(aux)
+					else:	
+						if aux not in sw_string_1B:
+							f.write(aux)
+
 			f.write(f'\tgen : for i in 0 to {FF-1} generate\n')
 			f.write(f'\t\tinst: flipFlop port map(Q(i),restart,Q(i+1));\n')
 			f.write(f'\tend generate;\n')
-
-			f.write(f'\tQ(0) <= clock;\n')
 
 			if commands != []:
 				f.write(f'\n\tprocess(timeout,{route_cmds})\n')
