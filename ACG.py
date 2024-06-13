@@ -2396,14 +2396,13 @@ class ACG():
 				f.write(f'indication => doubleSwitches_i, command => doubleSwitches_o, ')
 			f.write(f'lock_{doubleSwitchId} => {doubleSwitchId}_locking, ')	
 			f.write(f'correspondence_{doubleSwitchId} => state_{doubleSwitchId});\r\n')
+		'''
 
 		# instantiate signals
 		for signalId in signalData:
 			index = list(signalData.keys()).index(signalId)
 			f.write(f'\trailwaySignal_{signalId} : railwaySignal_{index} port map(')
-			f.write(f'clock => clock, ')
-			f.write(f'reset => reset, ')
-
+	
 			if 'Routes' in signalData[signalId]:
 				for element in signalData[signalId]['Routes']:
 					f.write(f'{element}_command => cmd_{element}_{signalId}, ')
@@ -2411,17 +2410,17 @@ class ACG():
 			ocupationLevel_0,ocupationLevel_1,ocupationLevel_2,signal_0,signal_1,signal_2,switches_1,switches_2,paths = self.getSignalGraph(signalId,signalData)
 
 			netElement = list(graph.keys()).index(ocupationLevel_0)
-			f.write(f'ocupation_{ocupationLevel_0} => ocupation({netElement}), ')
+			f.write(f'track_{ocupationLevel_0} => tracks_i({netElement}), ')
 			if ocupationLevel_1 != []:
 				for i in ocupationLevel_1:
 					if i != ocupationLevel_0:
 						netElement = list(graph.keys()).index(i)
-						f.write(f'ocupation_{i} => ocupation({netElement}), ')		
+						f.write(f'track_{i} => tracks_i({netElement}), ')		
 			if ocupationLevel_2 != []:
 				for i in ocupationLevel_2:
 					if i not in ocupationLevel_1 and i != ocupationLevel_0:
 						netElement = list(graph.keys()).index(i)
-						f.write(f'ocupation_{i} => ocupation({netElement}), ')
+						f.write(f'track_{i} => tracks_i({netElement}), ')
 
 			if signal_1 != []:
 				for i in signal_1:
@@ -2452,13 +2451,12 @@ class ACG():
 					f.write(f'{i}_state => state_{i}, ')	
 
 			if n_signals > 1:
-				f.write(f'indication.msb => signals_i.msb({index}), indication.lsb => signals_i.lsb({index}), ')
-				f.write(f'command.msb => signals_o.msb({index}), command.lsb => signals_o.lsb({index}), ')
+				f.write(f'indication => signals_i({index}), command => signals_o({index}), ')
 			if n_signals == 1:
 				f.write(f'indication => signals_i, command => signals_o, ')
-			f.write(f'lock_{signalId} => {signalId}_locking, ')	
-			f.write(f'correspondence_{signalId} => state_{signalId});\r\n')
-		'''
+			f.write(f'correspondence_{signalId} => state_{signalId}, ')
+		
+			f.write(f'clock => clock, reset => reset);\r\n')
 
 		# instantiate nodes
 		for netElementId in list(graph.keys()):
@@ -2537,7 +2535,7 @@ class ACG():
 		f.write(f'processed <= processing;\r\n')
 		#f.write(f'tracks_o <= tracks_i;\r\n')
 		f.write(f'routes_o <= routes_i;\r\n')
-		f.write(f'signals_o <= signals_i;\r\n')
+		#f.write(f'signals_o <= signals_i;\r\n')
 		#f.write(f'levelCrossings_o <= levelCrossings_i;\r\n')
 		#f.write(f'singleSwitches_o <= singleSwitches_i;\r\n')
 
@@ -2819,7 +2817,7 @@ class ACG():
 			f.write(f'\tsignal lockStateOut : objectLock := RELEASED;\n')
 			f.write(f'\tsignal positionStateIn : levelCrossingStates := UP;\n')
 			f.write(f'\tsignal positionStateOut : levelCrossingStates := UP;\n')
-			f.write(f'\tsignal correspondeceState : levelCrossingStates := UP;\n')
+			f.write(f'\tsignal correspondenceState : levelCrossingStates := UP;\n')
 			for neighbour in data['Neighbour']:
 				f.write(f'\tsignal {neighbour}_state : nodeStates := FREE;\n')
 			
@@ -2837,8 +2835,8 @@ class ACG():
 
 			f.write(f'\t-- Update command based on the values of positionStateOut and lockStateOut\n')
 			f.write(f"\tcommand <= slv_to_hex(std_logic_vector(to_unsigned(objectLock'pos(lockStateOut), 2) & to_unsigned(levelCrossingStates'pos(positionStateOut), 2)));\n")
-			f.write(f'\t-- Update correspondence based on the values of correspondeceState and lockStateOut\n')
-			f.write(f"\tcorrespondence <= slv_to_hex(std_logic_vector(to_unsigned(objectLock'pos(lockStateOut), 2) & to_unsigned(levelCrossingStates'pos(correspondeceState), 2)));\n")
+			f.write(f'\t-- Update correspondence based on the values of correspondenceState and lockStateOut\n')
+			f.write(f"\tcorrespondence <= slv_to_hex(std_logic_vector(to_unsigned(objectLock'pos(lockStateOut), 2) & to_unsigned(levelCrossingStates'pos(correspondenceState), 2)));\n")
 
 			f.write(f'\tgen : for i in 0 to {FF-1} generate\r\n')
 			f.write(f'\t\t inst: flipFlop port map(clock_in(i), restart, Q(i));\r\n')
@@ -2906,17 +2904,17 @@ class ACG():
 			f.write(f'\tbegin\n')
 					
 			f.write(f'\t\tif (positionStateOut = DOWN and positionStateIn = DOWN) then\n')
-			f.write(f'\t\t\tcorrespondeceState <= DOWN;\n')
+			f.write(f'\t\t\tcorrespondenceState <= DOWN;\n')
 			f.write(f'\t\t\trestart <= \'1\';\n')
 			f.write(f'\t\tend if;\n')
 			
 			f.write(f'\t\tif (positionStateOut = UP and positionStateIn = UP) then\n')
-			f.write(f'\t\t\tcorrespondeceState <= UP;\n')
+			f.write(f'\t\t\tcorrespondenceState <= UP;\n')
 			f.write(f'\t\t\trestart <= \'1\';\n')
 			f.write(f'\t\tend if;\n')
 
 			f.write(f'\t\tif (positionStateOut /= positionStateIn) then\n')
-			f.write(f'\t\t\tcorrespondeceState <= TRANSITION;\n')
+			f.write(f'\t\t\tcorrespondenceState <= TRANSITION;\n')
 			f.write(f'\t\t\trestart <= \'0\';\n')
 			f.write(f'\t\tend if;\n')
 		
@@ -3008,7 +3006,7 @@ class ACG():
 			f.write(f'\tsignal lockStateOut : objectLock := RELEASED;\n')
 			f.write(f'\tsignal positionStateIn : singleSwitchStates := NORMAL;\n')
 			f.write(f'\tsignal positionStateOut : singleSwitchStates := NORMAL;\n')
-			f.write(f'\tsignal correspondeceState : singleSwitchStates := NORMAL;\n')
+			f.write(f'\tsignal correspondenceState : singleSwitchStates := NORMAL;\n')
 
 			f.write(f'begin\n')
 
@@ -3021,9 +3019,8 @@ class ACG():
 
 			f.write(f'\t-- Update command based on the values of positionStateOut and lockStateOut\n')
 			f.write(f"\tcommand <= slv_to_hex(std_logic_vector(to_unsigned(objectLock'pos(lockStateOut), 2) & to_unsigned(singleSwitchStates'pos(positionStateOut), 2)));\n")
-			f.write(f'\t-- Update correspondence based on the values of correspondeceState and lockStateOut\n')
-			f.write(f"\tcorrespondence <= slv_to_hex(std_logic_vector(to_unsigned(objectLock'pos(lockStateOut), 2) & to_unsigned(singleSwitchStates'pos(correspondeceState), 2)));\n")
-
+			f.write(f'\t-- Update correspondence based on the values of correspondenceState and lockStateOut\n')
+			f.write(f"\tcorrespondence <= slv_to_hex(std_logic_vector(to_unsigned(objectLock'pos(lockStateOut), 2) & to_unsigned(singleSwitchStates'pos(correspondenceState), 2)));\n")
 
 			f.write(f'\tgen : for i in 0 to {FF-1} generate\r\n')
 			f.write(f'\t\t inst: flipFlop port map(clock_in(i), restart, Q(i));\r\n')
@@ -3089,17 +3086,17 @@ class ACG():
 			f.write(f'\tbegin\r\n')
 			
 			f.write(f'\t\tif (positionStateOut = NORMAL and positionStateIn = NORMAL) then\r\n')
-			f.write(f'\t\t\tcorrespondeceState <= NORMAL;\r\n')
+			f.write(f'\t\t\tcorrespondenceState <= NORMAL;\r\n')
 			f.write(f'\t\t\trestart <= \'1\';\r\n')
 			f.write(f'\t\tend if;\r\n')
 			
 			f.write(f'\t\tif (positionStateOut = REVERSE and positionStateIn = REVERSE) then\r\n')
-			f.write(f'\t\t\tcorrespondeceState <= REVERSE;\r\n')
+			f.write(f'\t\t\tcorrespondenceState <= REVERSE;\r\n')
 			f.write(f'\t\t\trestart <= \'1\';\r\n')
 			f.write(f'\t\tend if;\r\n')
 
 			f.write(f'\t\tif (positionStateOut /= positionStateIn) then\r\n')
-			f.write(f'\t\t\tcorrespondeceState <= TRANSITION;\r\n')
+			f.write(f'\t\t\tcorrespondenceState <= TRANSITION;\r\n')
 			f.write(f'\t\t\trestart <= \'0\';\r\n')
 			f.write(f'\t\tend if;\r\n')
 
@@ -3638,10 +3635,13 @@ class ACG():
 			f.write(f'\tsignal timeout : std_logic := \'0\';\n')
 
 			f.write(f'\tsignal commandState : routeCommands := RELEASE;\n')
+			f.write(f'\tsignal lockStateIn : objectLock := RELEASED;\n')
+			f.write(f'\tsignal lockStateOut : objectLock := RELEASED;\n')
+			f.write(f'\tsignal aspectStateIn : signalStates := RED;\n')
+			f.write(f'\tsignal aspectStateOut : signalStates := RED;\n')
+			f.write(f'\tsignal correspondenceState : signalStates := RED;\n')
+
 			f.write(f'\tsignal path : integer := 0;\n')
-
-
-			f.write(f'\tsignal aspectState : signalStates := RED;\n')
 			
 			lc_string = []
 			for path in paths:
@@ -3664,7 +3664,7 @@ class ACG():
 			if len(signal_1) > 0:
 				for j in signal_1:
 					if j != signal_0:
-						f.write(f'\tsignal {j}_position : signalStates;\n')
+						f.write(f'\tsignal {j}_aspect : signalStates;\n')
 						f.write(f'\tsignal {j}_lock : objectLock := RELEASED;\n')	
 			if len(switches_1) > 0:
 				for k in switches_1:
@@ -3688,7 +3688,7 @@ class ACG():
 			if len(signal_2) > 0:
 				for j in signal_2:
 					if j != signal_0 and j not in signal_1:
-						f.write(f'\tsignal {j}_position : signalStates;\n')
+						f.write(f'\tsignal {j}_aspect : signalStates;\n')
 						f.write(f'\tsignal {j}_lock : objectLock := RELEASED;\n')	
 			if len(switches_2) > 0:
 				for k in switches_2:
@@ -3713,6 +3713,12 @@ class ACG():
 			f.write(f'begin\n')
 			f.write(f'\tclock_in(0) <= clock;\r\n')
 
+			f.write(f"\tlockStateIn <= objectLock'val(to_integer(unsigned(hex_to_slv(indication)(1 to 0))));\n")
+			f.write(f"\taspectStateIn <= signalStates'val(to_integer(unsigned(hex_to_slv(indication)(2 to 3))));\n")
+
+			f.write(f"\tcommand <= slv_to_hex(std_logic_vector(to_unsigned(objectLock'pos(lockStateOut), 2) & to_unsigned(signalStates'pos(aspectStateOut), 2)));\n")
+			f.write(f"\tcorrespondence_{name} <= slv_to_hex(std_logic_vector(to_unsigned(objectLock'pos(lockStateOut), 2) & to_unsigned(signalStates'pos(correspondenceState), 2)));\n")
+
 			lc_string = []
 			for path in paths:
 				if 'LevelCrossings' in paths[path]:
@@ -3733,7 +3739,7 @@ class ACG():
 			if len(signal_1) > 0:
 				for j in signal_1:
 					if j != signal_0:
-						f.write(f"\t{j}_position <= signalStates'val(to_integer(unsigned(hex_to_slv(correspondence_{j})(2 to 3))));\n")
+						f.write(f"\t{j}_aspect <= signalStates'val(to_integer(unsigned(hex_to_slv(correspondence_{j})(2 to 3))));\n")
 						f.write(f"\t{j}_lock <= objectLock'val(to_integer(unsigned(hex_to_slv(correspondence_{j})(1 to 0))));\n")
 			if len(switches_1) > 0:
 				for k in switches_1:
@@ -3760,7 +3766,7 @@ class ACG():
 			if len(signal_2) > 0:
 				for j in signal_2:
 					if j != signal_0 and j not in signal_1:
-						f.write(f"\t{j}_position <= signalStates'val(to_integer(unsigned(hex_to_slv(correspondence_{j})(2 to 3))));\n")
+						f.write(f"\t{j}_aspect <= signalStates'val(to_integer(unsigned(hex_to_slv(correspondence_{j})(2 to 3))));\n")
 						f.write(f"\t{j}_lock <= objectLock'val(to_integer(unsigned(hex_to_slv(correspondence_{j})(1 to 0))));\n")
 			if len(switches_2) > 0:
 				for k in switches_2:
@@ -3814,17 +3820,17 @@ class ACG():
 				f.write(f'\tbegin\r\n')
 				f.write(f'\t\tcase commandState is\n')
 				f.write(f'\t\t\twhen RELEASE => -- AUTOMATIC\n')
-				f.write(f'\t\t\t\tlock_{name} <= RELEASED;\n')
+				f.write(f'\t\t\t\tlockStateOut <= RELEASED;\n')
 				f.write(f'\t\t\twhen RESERVE => -- DONT CHANGE\n')
-				f.write(f'\t\t\t\tlock_{name} <= RESERVED;\n')
+				f.write(f'\t\t\t\tlockStateOut <= RESERVED;\n')
 				f.write(f'\t\t\twhen LOCK => -- DONT CHANGE\n')
-				f.write(f'\t\t\t\tlock_{name} <= LOCKED;\n')
+				f.write(f'\t\t\t\tlockStateOut <= LOCKED;\n')
 				f.write(f'\t\t\twhen others =>\n')
-				f.write(f'\t\t\t\tlock_{name} <= LOCKED;\n')
+				f.write(f'\t\t\t\tlockStateOut <= LOCKED;\n')
 				f.write(f'\t\tend case;\n')
 				f.write(f'\tend process;\n') 
 			else:
-				f.write(f'\tlock_{name} <= LOCKED;\n')
+				f.write(f'\tlockStateOut <= RELEASED;\n')
 
 			if paths != {}:
 				f.write(f'\n\tprocess(commandState)\n')
@@ -3837,10 +3843,10 @@ class ACG():
 				sw_dict = {'N':'NORMAL','R':'REVERSE','NN':'DOUBLE_NORMAL','RR':'DOUBLE_REVERSE','RN':'REVERSE_NORMAL','NR':'NORMAL_REVERSE','XN':'NORMAL','XR':'REVERSE'}
 				for path in paths:
 					if 'Switches' in paths[path]:
-						sw_conditions.append(" and ".join(f'{"s" if x[0].isdigit() else ""}{x.split('_')[0]}_state = {sw_dict[x.split('_')[1]]}' for x in paths[path]['Switches']))
+						sw_conditions.append(" and ".join(f'{"s" if x[0].isdigit() else ""}{x.split('_')[0]}_position = {sw_dict[x.split('_')[1]]}' for x in paths[path]['Switches']))
 				for path in paths:
 					if 'LevelCrossings' in paths[path] and paths[path]['LevelCrossings'] != []:
-						lc_conditions.append(" and ".join(f'{"s" if x[0].isdigit() else ""}{x}_state = DOWN' for x in paths[path]['LevelCrossings'] if x != None))
+						lc_conditions.append(" and ".join(f'{"s" if x[0].isdigit() else ""}{x}_position = DOWN' for x in paths[path]['LevelCrossings'] if x != None))
 					else:
 						lc_conditions.append(None)
 
@@ -3878,14 +3884,14 @@ class ACG():
 				f.write(f'\tend process;\n') 
 			else:
 				if name[0] == 'T':
-					f.write(f'\taspectState <= RED;\n')
+					f.write(f'\taspectStateOut <= RED;\n')
 				if name[0] == 'L':
-					f.write(f'\taspectState <= DOUBLE_YELLOW;\n')
+					f.write(f'\taspectStateOut <= DOUBLE_YELLOW;\n')
 			
 			if paths != {}:
     				
-				occupation = ",".join([f"ocupation_{occ}" for occ in ocupationLevel_1])
-				signals = ",".join([f"correspondence_{sig}" for sig in signal_1])
+				occupation = ",".join([f"{occ}_state" for occ in ocupationLevel_1])
+				signals = ",".join([f"{sig}_aspect" for sig in signal_1])
 
 				extra = [occupation,signals]
 				extra_connected = ",".join([f"{ext}" for ext in extra if ext])
@@ -3896,34 +3902,33 @@ class ACG():
 
 				f.write(f'\t\tcase path is\n')
 				f.write(f'\t\t\twhen 0 =>\n')
-				f.write(f'\t\t\t\taspectState <= RED;\r\n')
+				f.write(f'\t\t\t\taspectStateOut <= RED;\r\n')
 				for i in range(len(paths)):
 					f.write(f'\t\t\twhen {i+1} =>\n')
 					signal_dict = {'RED':'DOUBLE_YELLOW','DOUBLE_YELLOW':'YELLOW','YELLOW':'GREEN','GREEN':'GREEN'}
 					if not paths[path]['Share']:
-						conditions = " or ".join(f'ocupation_{x} = \'0\'' for x in paths[i+1]['FirstPath'])
+						conditions = " or ".join(f'{x}_state = OCCUPIED' for x in paths[i+1]['FirstPath'])
 						f.write(f'\t\t\t\tif ({conditions}) then\n')
-						f.write(f'\t\t\t\t\taspectState <= RED;\n')
+						f.write(f'\t\t\t\t\taspectStateOut <= RED;\n')
 						f.write(f'\t\t\t\telse\n')
 
 						for j in signal_dict:
-							f.write(f'\t\t\t\t\tif (correspondence_{paths[i+1]['Signals'][1]} = {j}) then\n')
-							f.write(f'\t\t\t\t\t\taspectState <= {signal_dict[j]};\n')
+							f.write(f'\t\t\t\t\tif ({paths[i+1]['Signals'][1]}_aspect = {j}) then\n')
+							f.write(f'\t\t\t\t\t\taspectStateOut <= {signal_dict[j]};\n')
 							f.write(f'\t\t\t\t\tend if;\n')
 					
 						f.write(f'\t\t\t\tend if;\n')
 					else:
 						for j in signal_dict:
-							f.write(f'\t\t\t\tif (correspondence_{paths[i+1]['Signals'][1]} = {j}) then\n')
-							f.write(f'\t\t\t\t\taspectState <= {signal_dict[j]};\n')
+							f.write(f'\t\t\t\tif ({paths[i+1]['Signals'][1]}_aspect = {j}) then\n')
+							f.write(f'\t\t\t\t\taspectStateOut <= {signal_dict[j]};\n')
 							f.write(f'\t\t\t\tend if;\n')
 
 				f.write(f'\t\t\twhen others =>\n')
-				f.write(f'\t\t\t\taspectState <= RED;\n')
+				f.write(f'\t\t\t\taspectStateOut <= RED;\n')
 				f.write(f'\t\tend case;\n')
 				f.write(f'\tend process;\n') 
 			
-			'''
 			f.write(f'\n\tprocess(clock,reset,Q,restart)\n')
 			f.write(f'\tbegin\n')
 			f.write(f'\t\tif (reset = \'1\' or Q = "{timeout}") then\n')
@@ -3933,72 +3938,31 @@ class ACG():
 			f.write(f'\t\t\ttimeout <= \'0\';\n')
 			f.write(f'\t\tend if;\n')
 			f.write(f'\tend process;\r\n') 
-			'''
 
-			f.write(f'\n\tprocess(timeout,commandAux,indication)\n')
+			f.write(f'\n\tprocess(timeout,aspectStateOut,aspectStateIn)\n')
 			f.write(f'\tbegin\n')
-			f.write(f'\t\tif(timeout = \'1\') then\n')
-			f.write(f'\t\t\trestart <= \'1\';\n')
-			f.write(f'\t\t\tif(indication.msb = \'0\' and indication.lsb = \'0\') then\n')
-			f.write(f'\t\t\t\tcorrespondence_{name} <= RED;\n')
-			f.write(f'\t\t\tend if;\n')
-			f.write(f'\t\t\tif(indication.msb = \'1\' and indication.lsb = \'1\') then\n')
-			f.write(f'\t\t\t\tcorrespondence_{name} <= GREEN;\n')
-			f.write(f'\t\t\tend if;\n')
-			f.write(f'\t\t\tif(indication.msb = \'0\' and indication.lsb = \'1\') then\n')
-			f.write(f'\t\t\t\tcorrespondence_{name} <= DOUBLE_YELLOW;\n')
-			f.write(f'\t\t\tend if;\n')
-			f.write(f'\t\t\tif(indication.msb = \'1\' and indication.lsb = \'0\') then\n')
-			f.write(f'\t\t\t\tcorrespondence_{name} <= YELLOW;\n')
-			f.write(f'\t\t\tend if;\n')
-			f.write(f'\t\telse\n')
-			
-			f.write(f'\t\t\tif (commandAux.msb = \'0\' and commandAux.lsb = \'0\' and indication.msb = \'0\' and indication.lsb = \'0\') then\n')
-			f.write(f'\t\t\t\tcorrespondence_{name} <= RED;\n')
-			f.write(f'\t\t\t\trestart <= \'1\';\n')
-			f.write(f'\t\t\tend if;\n')
-			f.write(f'\t\t\tif (commandAux.msb = \'1\' and commandAux.lsb = \'1\' and indication.msb = \'1\' and indication.lsb = \'1\') then\n')
-			f.write(f'\t\t\t\tcorrespondence_{name} <= GREEN;\n')
-			f.write(f'\t\t\t\trestart <= \'1\';\n')
-			f.write(f'\t\t\tend if;\n')
-			f.write(f'\t\t\tif (commandAux.msb = \'0\' and commandAux.lsb = \'1\' and indication.msb = \'0\' and indication.lsb = \'1\') then\n')
-			f.write(f'\t\t\t\tcorrespondence_{name} <= DOUBLE_YELLOW;\n')
-			f.write(f'\t\t\t\trestart <= \'1\';\n')
-			f.write(f'\t\t\tend if;\n')
-			f.write(f'\t\t\tif (commandAux.msb = \'1\' and commandAux.lsb = \'0\' and indication.msb = \'1\' and indication.lsb = \'0\') then\n')
-			f.write(f'\t\t\t\tcorrespondence_{name} <= YELLOW;\n')
-			f.write(f'\t\t\t\trestart <= \'1\';\n')
-			f.write(f'\t\t\tend if;\n')
-			f.write(f'\t\t\tif ((commandAux.msb /= indication.msb) or (commandAux.lsb /= indication.lsb)) then\n')
-			f.write(f'\t\t\t\tcorrespondence_{name} <= RED;\n')
-			f.write(f'\t\t\t\trestart <= \'0\';\n')
-			f.write(f'\t\t\tend if;\n')
-
+		
+			f.write(f'\t\tif(aspectStateOut = RED and aspectStateIn = RED) then\n')
+			f.write(f'\t\t\tcorrespondenceState <= RED;\n')
+			f.write(f'\t\t\trestart <= \'1\';\r\n')
 			f.write(f'\t\tend if;\n')
+
+			f.write(f'\t\tif(aspectStateOut = GREEN and aspectStateIn = GREEN) then\n')
+			f.write(f'\t\t\tcorrespondenceState <= GREEN;\n')
+			f.write(f'\t\t\trestart <= \'1\';\r\n')
+			f.write(f'\t\tend if;\n')
+
+			f.write(f'\t\tif(aspectStateOut = DOUBLE_YELLOW and aspectStateIn = DOUBLE_YELLOW) then\n')
+			f.write(f'\t\t\tcorrespondenceState <= DOUBLE_YELLOW;\n')
+			f.write(f'\t\t\trestart <= \'1\';\r\n')
+			f.write(f'\t\tend if;\n')
+
+			f.write(f'\t\tif(aspectStateOut = YELLOW and aspectStateIn = YELLOW) then\n')
+			f.write(f'\t\t\tcorrespondenceState <= YELLOW;\n')
+			f.write(f'\t\t\trestart <= \'1\';\r\n')
+			f.write(f'\t\tend if;\n')
+
 			f.write(f'\tend process;\n')  
-
-			f.write(f'\n\tprocess(aspectState)\n')
-			f.write(f'\tbegin\n')
-			f.write(f'\t\tcase aspectState is\n')
-			f.write(f'\t\t\twhen RED =>\n')
-			f.write(f'\t\t\t\tcommandAux.msb <= \'0\';\n')
-			f.write(f'\t\t\t\tcommandAux.lsb <= \'0\';\n')
-			f.write(f'\t\t\twhen DOUBLE_YELLOW =>\n')
-			f.write(f'\t\t\t\tcommandAux.msb <= \'0\';\n')
-			f.write(f'\t\t\t\tcommandAux.lsb <= \'1\';\n')
-			f.write(f'\t\t\twhen YELLOW =>\n')
-			f.write(f'\t\t\t\tcommandAux.msb <= \'1\';\n')
-			f.write(f'\t\t\t\tcommandAux.lsb <= \'0\';\n')
-			f.write(f'\t\t\twhen GREEN =>\n')
-			f.write(f'\t\t\t\tcommandAux.msb <= \'1\';\n')
-			f.write(f'\t\t\t\tcommandAux.lsb <= \'1\';\n')
-			f.write(f'\t\t\twhen others =>\n')
-			f.write(f'\t\t\t\tcommandAux.msb <= \'0\';\n')
-			f.write(f'\t\t\t\tcommandAux.lsb <= \'0\';\n')
-			f.write(f'\t\tend case;\n')
-			f.write(f'\tend process;\n') 
-
-			f.write(f'\tcommand <= commandAux;\n')
 			
 			f.write(f'end Behavioral;') 
 			f.close()  # Close header file
