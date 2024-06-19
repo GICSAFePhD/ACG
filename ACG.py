@@ -2459,11 +2459,11 @@ class ACG():
 			f.write(f'\tnode_{netElementId} : node_{index} port map(')
 			
 			if n_netElements > 1:
-				f.write(f'track_i => tracks_i({index}), track_o => tracks_o({index}), ')
-				#f.write(f'track_i => tracks_i({index}), track_o => state_{netElementId}, ')
+				#f.write(f'track_i => tracks_i({index}), track_o => tracks_o({index}), ')
+				f.write(f'track_i => tracks_i({index}), track_o => state_{netElementId}, ')
 			if n_netElements == 1:	
-				f.write(f'track_i => tracks_i, track_o => tracks_o, ')	
-				#f.write(f'track_i => tracks_i, track_o => state_{netElementId}, ')	
+				#f.write(f'track_i => tracks_i, track_o => tracks_o, ')	
+				f.write(f'track_i => tracks_i, track_o => state_{netElementId}, ')	
 
 			for route in routes:
 				if netElementId in routes[route]['Path']:
@@ -2490,8 +2490,8 @@ class ACG():
 				track_index = list(graph.keys()).index(netElementId)
 				if netElementId in routes[routeId]['Path']:
 					f.write(f'{netElementId}_command => cmd_R{routeId}_{netElementId}, ')
-					f.write(f'track_{netElementId} => tracks_i({track_index}), ')
-					#f.write(f'track_{netElementId} => state_{netElementId}, ')
+					#f.write(f'track_{netElementId} => tracks_i({track_index}), ')
+					f.write(f'track_{netElementId} => state_{netElementId}, ')
 	
 			for levelCrossingId in lc_list:
 				if levelCrossingId != None:
@@ -2524,8 +2524,8 @@ class ACG():
 		#f.write(f'levelCrossings_o <= levelCrossings_i;\r\n')
 		#f.write(f'singleSwitches_o <= singleSwitches_i;\r\n')
 
-		#for i,j in enumerate(list(graph.keys())):
-		#	f.write(f'\ttracks_o({i}) <= state_{j};\r\n')
+		for i,j in enumerate(list(graph.keys())):
+			f.write(f'\ttracks_o({i}) <= state_{j};\r\n')
 
 		f.write(f'end Behavioral;') 
     
@@ -3824,7 +3824,7 @@ class ACG():
 				f.write(f'\n\tprocess(commandState)\n')
 				f.write(f'\tbegin\n')
 				f.write(f'\t\tcase commandState is\n')
-				f.write(f'\r\t\t\twhen RELEASE | LOCK =>\n')
+				f.write(f'\r\t\t\twhen RELEASE =>\n')
 
 				sw_conditions = []
 				lc_conditions = []
@@ -3865,7 +3865,9 @@ class ACG():
 					f.write(f'\t\t\t\tend if;\n')
 
 				f.write(f'\r\t\t\twhen RESERVE =>\n')
-				f.write(f'\t\t\t\tpath <= 0;\n')				
+				f.write(f'\t\t\t\tpath <= {len(main_conditions)+1};\n')		
+				f.write(f'\r\t\t\twhen LOCK =>\n')
+				f.write(f'\t\t\t\tpath <= 0;\n')		
 				f.write(f'\r\t\t\twhen others =>\n')
 				f.write(f'\t\t\t\tpath <= 0;\n')
 				f.write(f'\t\tend case;\n')
@@ -3912,6 +3914,8 @@ class ACG():
 							f.write(f'\t\t\t\t\taspectStateOut <= {signal_dict[j]};\n')
 							f.write(f'\t\t\t\tend if;\n')
 
+				f.write(f'\t\t\twhen {len(paths)+1} =>\n')
+				f.write(f'\t\t\t\taspectStateOut <= GREEN;\r\n')
 				f.write(f'\t\t\twhen others =>\n')
 				f.write(f'\t\t\t\taspectStateOut <= RED;\n')
 				f.write(f'\t\tend case;\n')
@@ -4217,10 +4221,7 @@ class ACG():
 
 	def createRoute(self,index,route,levelCrossingData,singleSwitchData,mode, f = None,example = 1):
 		
-		# 40400 for SW is because they are locked, GUI consider 4 other position and move it
-		# Add again the NEW and BEST tracks_o connection so routes can read the output and not the raw signal
-		# Consider removing route feedback after locking all.
-		# Redo ne_used		
+		# End signals should be commanded by routes also	
 		
 		if mode == 'entity':
 			node = f'route_{index}'
@@ -4387,9 +4388,12 @@ class ACG():
 			infra = [nets_state,nets_lock,sws_lock,lcs_lock]
 			infras = ",".join([f'{inf}' for inf in infra if inf])
 
-			f.write(f'\n\tprocess(routingIn,routeState,{infras})\n')
+			#f.write(f'\n\tprocess(routingIn,routeState,{infras})\n')
+			f.write(f'\n\tprocess(clock)\n')
 			f.write(f'\tbegin\n')
 	
+			f.write(f'\tif (clock\'Event and clock = \'1\') then\n')
+
 			f.write(f'\t\tcase routeState is\n')
 
 			f.write(f'\r\t\t\twhen WAITING_COMMAND =>\n')
@@ -4455,39 +4459,41 @@ class ACG():
 			generalLock = " and ".join(f'{s}_lock = LOCKED' for s in infraestructure if s)
 			if any(element != None for element in infraestructure):
 				f.write(f'\t\t\t\tif ({generalLock})then\n')
-
-				#f.write(f'\t\t\t\t\trouteState <= DRIVING_SIGNAL;\n')
-				f.write(f'\t\t\t\t\trouteState <= SEQUENTIAL_RELEASE;\n')
+				for net in route['Path']:
+					f.write(f'\t\t\t\t\t{net}_used <= \'0\';\n')
+				f.write(f'\t\t\t\t\trouteState <= DRIVING_SIGNAL;\n')
+				#f.write(f'\t\t\t\t\trouteState <= SEQUENTIAL_RELEASE;\n')
 				
+
 				f.write(f'\t\t\t\tend if;\n')
 			else:
-				#f.write(f'\t\t\t\t\trouteState <= DRIVING_SIGNAL;\n')
-				f.write(f'\t\t\t\t\trouteState <= SEQUENTIAL_RELEASE;\n')
+				for net in route['Path']:
+					f.write(f'\t\t\t\t\t{net}_used <= \'0\';\n')
+				f.write(f'\t\t\t\t\trouteState <= DRIVING_SIGNAL;\n')
+				#f.write(f'\t\t\t\t\trouteState <= SEQUENTIAL_RELEASE;\n')
 
-			'''
+			
 			f.write(f'\r\t\t\twhen DRIVING_SIGNAL =>\n')
 			
 			
-			f.write(f'\t\t\t\tif ({route['Start']}_lock = RELEASED) then\n')
+			f.write(f'\t\t\t\tif ({route['Start']}_lock = RELEASED and {route['End']}_lock = RELEASED) then\n')
 			f.write(f'\t\t\t\t\t{route['Start']}_command <= RESERVE;\n')
+			f.write(f'\t\t\t\t\t{route['End']}_command <= LOCK;\n')
 			f.write(f'\t\t\t\tend if;\n')
 			#f.write(f'\t\t\t\tif ({route['Start']}_lock = RESERVED and {route['Start']}_state /= RED) then\n')
-			f.write(f'\t\t\t\tif ({route['Start']}_lock = RESERVED) then\n')
+			f.write(f'\t\t\t\tif ({route['Start']}_lock = RESERVED and {route['End']}_lock = LOCKED) then\n')
 			f.write(f'\t\t\t\t\trestart <= \'0\';\n')
-			f.write(f'\t\t\t\t\t{route['Start']}_command <= LOCK;\n')
 			f.write(f'\t\t\t\t\trouteState <= SEQUENTIAL_RELEASE;\n')
-			f.write(f'\t\t\t\tend if;\n')
-			
-			f.write(f'\t\t\t\trouteState <= SEQUENTIAL_RELEASE;\n')
-			'''
+			f.write(f'\t\t\t\tend if;\n')		
+
 			f.write(f'\r\t\t\twhen SEQUENTIAL_RELEASE =>\n')
 			f.write(f'\t\t\t\t--- Sequential release\n')
+
 			for net in route['Path']:
 				f.write(f'\t\t\t\tif ({net}_used = \'0\' and {net}_state = OCCUPIED) then \n')
 				f.write(f'\t\t\t\t\t{net}_used <= \'1\';\n')
 				if net == route['Path'][-1]:
-					f.write(f'\t\t\t\t\t--- Finish -> Release all\n')
-					
+					f.write(f'\t\t\t\t\t--- Finish -> Release all\n')			
 					f.write(f'\t\t\t\t\trouteState <= RELEASING_INFRASTRUCTURE;\n')
 				f.write(f'\t\t\t\tend if;\n')
 
@@ -4496,8 +4502,9 @@ class ACG():
 					f.write(f'\t\t\t\t\t{net}_used <= \'0\';\n')
 					f.write(f'\t\t\t\t\t{net}_command <= RELEASE;\n')
 					f.write(f'\t\t\t\tend if;\n')
-			
+
 			f.write(f'\r\t\t\twhen RELEASING_INFRASTRUCTURE =>\n')
+
 			for levelCrossing in lc_list:
 				if levelCrossing != None:
 					f.write(f'\t\t\t\t{levelCrossing}_command <= RELEASE;\n')
@@ -4507,11 +4514,15 @@ class ACG():
 
 			for net in route['Path']:
 				f.write(f'\t\t\t\t{net}_command <= RELEASE;\n')
+			
+			f.write(f'\t\t\t\t{route['Start']}_command <= RELEASE;\n')
+			f.write(f'\t\t\t\t{route['End']}_command <= RELEASE;\n')
 			f.write(f'\t\t\t\trouteState <= WAITING_COMMAND;\n')
 
 			f.write(f'\r\t\t\twhen others =>\n')
 			f.write(f'\t\t\t\trouteState <= WAITING_COMMAND;\n')
 			f.write(f'\t\tend case;\r\n')
+			f.write(f'\tend if;\r\n')
 			f.write(f'\tend process;\r\n') 
 
 			f.write(f'end Behavioral;') 
