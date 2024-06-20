@@ -2261,11 +2261,23 @@ class ACG():
 				self.createDoubleSwitch(index,doubleSwitchId,doubleSwitchData[doubleSwitchId],mode = 'component',f = f)
 				self.createDoubleSwitch(index,doubleSwitchId,doubleSwitchData[doubleSwitchId],mode = 'entity',f = None, example = example)
 		# component signals  
-		if n_signals > 0:  	
+		if n_signals > 0:
+
+			futureRoute = {}
+
+			for route in routes:
+				end = routes[route]['End']
+
+				if end not in futureRoute:
+					futureRoute[end] = []
+				futureRoute[end].append(f'R{route}')
+
 			for signalId in signalData:
+				#if signalId in futureRoute:
+				#	print(f'XZY {signalId} {futureRoute[signalId]}')
 				index = list(signalData.keys()).index(signalId)
-				self.createSignal(index,signalId,signalData,mode = 'component',f = f)
-				self.createSignal(index,signalId,signalData,mode = 'entity',f = None, example = example)
+				self.createSignal(index,signalId,signalData,futureRoute,mode = 'component',f = f)
+				self.createSignal(index,signalId,signalData,futureRoute,mode = 'entity',f = None, example = example)
 		# component node
 		if n_netElements > 0:
 			for netElementId in list(graph.keys()):
@@ -2400,6 +2412,10 @@ class ACG():
 	
 			if 'Routes' in signalData[signalId]:
 				for element in signalData[signalId]['Routes']:
+					f.write(f'{element}_command => cmd_{element}_{signalId}, ')
+
+			if signalId in futureRoute:
+				for element in futureRoute[signalId]:
 					f.write(f'{element}_command => cmd_{element}_{signalId}, ')
 
 			ocupationLevel_0,ocupationLevel_1,ocupationLevel_2,signal_0,signal_1,signal_2,switches_1,switches_2,paths = self.getSignalGraph(signalId,signalData)
@@ -3497,7 +3513,7 @@ class ACG():
 			f.write(f'end Behavioral;') 
 			f.close()  # Close header file
 
-	def createSignal(self,index,name,data,mode, f = None,example = 1):
+	def createSignal(self,index,name,data,futureRoute,mode, f = None,example = 1):
 		if mode == 'entity':
 			node = f'railwaySignal_{index}'
 			f = open(f'App/Layouts/Example_{example}/VHDL/{node}.vhd',"w+")
@@ -3519,6 +3535,11 @@ class ACG():
 			for element in range(len(data[name]['Routes'])):
 				f.write(f'\t\t\t{data[name]['Routes'][element]}_command : in routeCommands;\n')
 				commands.append(data[name]['Routes'][element])
+
+		if name in futureRoute:
+			for r in futureRoute[name]:
+				f.write(f'\t\t\t{r}_command : in routeCommands;\n')
+				commands.append(r)
 
 		ocupationLevel_0,ocupationLevel_1,ocupationLevel_2,signal_0,signal_1,signal_2,switches_1,switches_2,paths = self.getSignalGraph(name,data)
 		
@@ -3897,7 +3918,7 @@ class ACG():
 					f.write(f'\t\t\twhen {i+1} =>\n')
 					signal_dict = {'RED':'DOUBLE_YELLOW','DOUBLE_YELLOW':'YELLOW','YELLOW':'GREEN','GREEN':'GREEN'}
 					if not paths[path]['Share']:
-						conditions = " or ".join(f'{x}_state = OCCUPIED' for x in paths[i+1]['FirstPath'])
+						conditions = " or ".join(f'{x}_state = OCCUPIED or {x}_lock = LOCKED'  for x in paths[i+1]['FirstPath'])
 						f.write(f'\t\t\t\tif ({conditions}) then\n')
 						f.write(f'\t\t\t\t\taspectStateOut <= RED;\n')
 						f.write(f'\t\t\t\telse\n')
