@@ -4298,7 +4298,7 @@ class ACG():
 
 		if mode == 'entity':
 			releasedLocks = " and ".join([f'{i}_lock = RELEASED' for i in route['Path']])
-			freeStates = " and ".join([f'{i}_state = FREE' for i in route['Path']])
+			freeStates = " and ".join([f'{i}_state = FREE' for i in route['Path'][1:]])
 			
 			reservedLocks = " and ".join([f'{i}_lock = RESERVED' for i in route['Path']])
 			lockedLocks = " and ".join([f'{i}_lock = LOCKED' for i in route['Path']])
@@ -4423,7 +4423,11 @@ class ACG():
 			f.write(f'\t\t\t\tend if;\n')
 
 			f.write(f'\r\t\t\twhen RESERVING_TRACKS =>\n')
-			f.write(f'\t\t\t\tif (({releasedLocks}) and ({freeStates})) then\n')
+			if freeStates != '':
+				f.write(f'\t\t\t\tif (({releasedLocks}) and ({freeStates})) then\n')
+			else:
+				f.write(f'\t\t\t\tif ({releasedLocks}) then\n')
+
 			for net in route['Path']:
 				f.write(f'\t\t\t\t\t{net}_command <= RESERVE;\n')
 			f.write(f'\t\t\t\tend if;\n')
@@ -4432,7 +4436,11 @@ class ACG():
 			f.write(f'\t\t\t\tend if;\n')
 
 			f.write(f'\r\t\t\twhen LOCKING_TRACKS =>\n')
-			f.write(f'\t\t\t\tif (({reservedLocks}) and ({freeStates})) then\n')
+			if freeStates != '':
+				f.write(f'\t\t\t\tif (({reservedLocks}) and ({freeStates})) then\n')
+			else:
+				f.write(f'\t\t\t\tif ({reservedLocks}) then\n')
+
 			for net in route['Path']:
 				f.write(f'\t\t\t\t\t{net}_command <= LOCK;\n')
 			f.write(f'\t\t\t\tend if;\n')
@@ -4482,20 +4490,14 @@ class ACG():
 				f.write(f'\t\t\t\tif ({generalLock})then\n')
 				for net in route['Path']:
 					f.write(f'\t\t\t\t\t{net}_used <= \'0\';\n')
-				f.write(f'\t\t\t\t\trouteState <= DRIVING_SIGNAL;\n')
-				#f.write(f'\t\t\t\t\trouteState <= SEQUENTIAL_RELEASE;\n')
-				
-
+				f.write(f'\t\t\t\t\trouteState <= DRIVING_SIGNAL;\n')	
 				f.write(f'\t\t\t\tend if;\n')
 			else:
 				for net in route['Path']:
 					f.write(f'\t\t\t\t\t{net}_used <= \'0\';\n')
 				f.write(f'\t\t\t\t\trouteState <= DRIVING_SIGNAL;\n')
-				#f.write(f'\t\t\t\t\trouteState <= SEQUENTIAL_RELEASE;\n')
-
 			
 			f.write(f'\r\t\t\twhen DRIVING_SIGNAL =>\n')
-			
 			
 			f.write(f'\t\t\t\tif ({route['Start']}_lock = RELEASED and {route['End']}_lock = RELEASED) then\n')
 			f.write(f'\t\t\t\t\t{route['Start']}_command <= RESERVE;\n')
@@ -4510,9 +4512,14 @@ class ACG():
 			f.write(f'\r\t\t\twhen SEQUENTIAL_RELEASE =>\n')
 			f.write(f'\t\t\t\t--- Sequential release\n')
 
-			for net in route['Path']:
-				f.write(f'\t\t\t\tif ({net}_used = \'0\' and {net}_state = OCCUPIED) then \n')
+			for i,net in enumerate(route['Path']):
+				if (net != route['Path'][0]):
+					f.write(f'\t\t\t\t\t---\n')
+					f.write(f'\t\t\t\tif ({route['Path'][i-1]}_lock = RELEASED and {net}_used = \'0\' and {net}_state = OCCUPIED) then \n')
+				else:
+					f.write(f'\t\t\t\tif ({net}_used = \'0\' and {net}_state = OCCUPIED) then \n')
 				f.write(f'\t\t\t\t\t{net}_used <= \'1\';\n')
+
 				if net == route['Path'][-1]:
 					f.write(f'\t\t\t\t\t--- Finish -> Release all\n')			
 					f.write(f'\t\t\t\t\trouteState <= RELEASING_INFRASTRUCTURE;\n')
@@ -4547,7 +4554,7 @@ class ACG():
 			f.write(f'\tend process;\r\n') 
 
 			f.write(f'end Behavioral;') 
-			f.close()  # Close header file
+			f.close()
     		
 	def createPrinter(self,N,example = 1):
 		node = 'printer'
