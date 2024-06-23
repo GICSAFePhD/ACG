@@ -455,7 +455,7 @@ class ACG():
 		f.write(f'\t\ttype routeCommands is (RELEASE,RESERVE,LOCK);\r\n')
 		f.write(f'\t\ttype objectLock is (RELEASED,RESERVED,LOCKED);\r\n')
 
-		f.write(f'\t\ttype routeStates is (WAITING_COMMAND,ROUTE_REQUEST,RESERVING_TRACKS,LOCKING_TRACKS,RESERVING_INFRASTRUCTURE,LOCKING_INFRASTRUCTURE,DRIVING_SIGNAL,SEQUENTIAL_RELEASE,RELEASING_INFRASTRUCTURE);\r\n')
+		f.write(f'\t\ttype routeStates is (WAITING_COMMAND,ROUTE_REQUEST,RESERVING_TRACKS,LOCKING_TRACKS,RESERVING_INFRASTRUCTURE,LOCKING_INFRASTRUCTURE,DRIVING_SIGNAL,SEQUENTIAL_RELEASE,RELEASING_INFRASTRUCTURE,CANCEL_ROUTE);\r\n')
 
 		f.write(f'\t\tfunction hex_to_slv(h: hex_char) return std_logic_vector;\n')
 		f.write(f'\t\tfunction slv_to_hex(s: std_logic_vector) return hex_char;\n')
@@ -2785,7 +2785,7 @@ class ACG():
 			reserveState = " or ".join([f'{i}_command = RESERVE' for i in commands])
 			lockState = " or ".join([f'{i}_command = LOCK' for i in commands])
 
-			freq = 120e9
+			freq = 125e6
 			timeout = 7
 
 			FF = math.ceil(math.log2(timeout*freq))
@@ -2972,7 +2972,7 @@ class ACG():
 			lockState_N = " or ".join([f'{i}_command = LOCK' for i in commands_N])
 			lockState_R = " or ".join([f'{i}_command = LOCK' for i in commands_R])
 
-			freq = 120e9
+			freq = 125e6
 			timeout = 7
 
 			FF = math.ceil(math.log2(timeout*freq))
@@ -3613,7 +3613,7 @@ class ACG():
 
 			route_cmds = ",".join([f'{i}_command' for i in commands])
 
-			freq = 120e9
+			freq = 125e6
 			timeout = 7
 
 			FF = math.ceil(math.log2(timeout*freq))
@@ -4306,8 +4306,8 @@ class ACG():
 			reserveState = " or ".join([f'{i}_state = RESERVE' for i in route['Path']])
 			lockState = " or ".join([f'{i}_state = LOCK' for i in route['Path']])
 				
-			freq = 120e9
-			timeout = 7
+			freq = 125e6
+			timeout = 30
 
 			FF = math.ceil(math.log2(timeout*freq))
 
@@ -4319,7 +4319,7 @@ class ACG():
 					total += t[i]
 					sequence[i] = 1
 			timeout_stop = " and ".join([f'Q({i}) = \'{sequence[i]}\'' for i in range(FF)])
-			timeout = '0'+"".join([f'{sequence[i]}' for i in range(FF)])[::-1]
+			timeout = ''.join(map(str, sequence[::-1]))+'0'
 
 			f.write(f'architecture Behavioral of {node} is\n')
 			f.write(f'\tcomponent flipFlop is\n')
@@ -4409,6 +4409,16 @@ class ACG():
 			infra = [nets_state,nets_lock,sws_lock,lcs_lock]
 			infras = ",".join([f'{inf}' for inf in infra if inf])
 
+			f.write(f'\n\tprocess(clock,reset,Q,restart)\n')
+			f.write(f'\tbegin\n')
+			f.write(f'\t\tif (reset = \'1\' or Q = "{timeout}") then\n')
+			f.write(f'\t\t\ttimeout <= \'1\';\n')
+			f.write(f'\t\tend if;\n')
+			f.write(f'\t\tif (restart = \'1\') then\n')
+			f.write(f'\t\t\ttimeout <= \'0\';\n')
+			f.write(f'\t\tend if;\n')
+			f.write(f'\tend process;\r\n') 
+
 			#f.write(f'\n\tprocess(routingIn,routeState,{infras})\n')
 			f.write(f'\n\tprocess(clock)\n')
 			f.write(f'\tbegin\n')
@@ -4423,6 +4433,12 @@ class ACG():
 			f.write(f'\t\t\t\tend if;\n')
 
 			f.write(f'\r\t\t\twhen RESERVING_TRACKS =>\n')
+			f.write(f'\t\t\t\trestart <= \'0\';\n')
+			f.write(f'\t\t\t\tif (routingIn = CANCEL_ROUTE or timeout =\'1\') then\n')
+			f.write(f'\t\t\t\t\trouteState <= CANCEL_ROUTE;\n')
+			f.write(f'\t\t\t\tend if;\n')
+			
+
 			if freeStates != '':
 				f.write(f'\t\t\t\tif (({releasedLocks}) and ({freeStates})) then\n')
 			else:
@@ -4432,10 +4448,15 @@ class ACG():
 				f.write(f'\t\t\t\t\t{net}_command <= RESERVE;\n')
 			f.write(f'\t\t\t\tend if;\n')
 			f.write(f'\t\t\t\tif ({reservedLocks})then\n')
+			f.write(f'\t\t\t\t\trestart <= \'1\';\n')
 			f.write(f'\t\t\t\t\trouteState <= LOCKING_TRACKS;\n')
 			f.write(f'\t\t\t\tend if;\n')
 
 			f.write(f'\r\t\t\twhen LOCKING_TRACKS =>\n')
+			f.write(f'\t\t\t\trestart <= \'0\';\n')
+			f.write(f'\t\t\t\tif (routingIn = CANCEL_ROUTE or timeout =\'1\') then\n')
+			f.write(f'\t\t\t\t\trouteState <= CANCEL_ROUTE;\n')
+			f.write(f'\t\t\t\tend if;\n')
 			if freeStates != '':
 				f.write(f'\t\t\t\tif (({reservedLocks}) and ({freeStates})) then\n')
 			else:
@@ -4445,10 +4466,15 @@ class ACG():
 				f.write(f'\t\t\t\t\t{net}_command <= LOCK;\n')
 			f.write(f'\t\t\t\tend if;\n')
 			f.write(f'\t\t\t\tif ({lockedLocks})then\n')
+			f.write(f'\t\t\t\t\trestart <= \'1\';\n')
 			f.write(f'\t\t\t\t\trouteState <= RESERVING_INFRASTRUCTURE;\n')
 			f.write(f'\t\t\t\tend if;\n')
 
 			f.write(f'\r\t\t\twhen RESERVING_INFRASTRUCTURE =>\n')
+			f.write(f'\t\t\t\trestart <= \'0\';\n')
+			f.write(f'\t\t\t\tif (routingIn = CANCEL_ROUTE or timeout =\'1\') then\n')
+			f.write(f'\t\t\t\t\trouteState <= CANCEL_ROUTE;\n')
+			f.write(f'\t\t\t\tend if;\n')
 			infraestructure = []
 			for levelCrossing in lc_list:
 				if levelCrossing != None:
@@ -4466,12 +4492,18 @@ class ACG():
 			generalReserve = " and ".join(f'{s}_lock = RESERVED' for s in infraestructure if s)
 			if any(element != None for element in infraestructure):
 				f.write(f'\t\t\t\tif ({generalReserve})then\n')
+				f.write(f'\t\t\t\t\trestart <= \'1\';\n')
 				f.write(f'\t\t\t\t\trouteState <= LOCKING_INFRASTRUCTURE;\n')
 				f.write(f'\t\t\t\tend if;\n')
 			else:
+				f.write(f'\t\t\t\t\trestart <= \'1\';\n')
 				f.write(f'\t\t\t\trouteState <= LOCKING_INFRASTRUCTURE;\n')
 
 			f.write(f'\r\t\t\twhen LOCKING_INFRASTRUCTURE =>\n')
+			f.write(f'\t\t\t\trestart <= \'0\';\n')
+			f.write(f'\t\t\t\tif (routingIn = CANCEL_ROUTE or timeout =\'1\') then\n')
+			f.write(f'\t\t\t\t\trouteState <= CANCEL_ROUTE;\n')
+			f.write(f'\t\t\t\tend if;\n')
 			infraestructure = []
 			for levelCrossing in lc_list:
 				if levelCrossing != None:
@@ -4490,14 +4522,20 @@ class ACG():
 				f.write(f'\t\t\t\tif ({generalLock})then\n')
 				for net in route['Path']:
 					f.write(f'\t\t\t\t\t{net}_used <= \'0\';\n')
+				f.write(f'\t\t\t\t\trestart <= \'1\';\n')
 				f.write(f'\t\t\t\t\trouteState <= DRIVING_SIGNAL;\n')	
 				f.write(f'\t\t\t\tend if;\n')
 			else:
 				for net in route['Path']:
 					f.write(f'\t\t\t\t\t{net}_used <= \'0\';\n')
+				f.write(f'\t\t\t\t\trestart <= \'1\';\n')
 				f.write(f'\t\t\t\t\trouteState <= DRIVING_SIGNAL;\n')
 			
 			f.write(f'\r\t\t\twhen DRIVING_SIGNAL =>\n')
+			f.write(f'\t\t\t\trestart <= \'0\';\n')
+			f.write(f'\t\t\t\tif (routingIn = CANCEL_ROUTE or timeout =\'1\') then\n')
+			f.write(f'\t\t\t\t\trouteState <= CANCEL_ROUTE;\n')
+			f.write(f'\t\t\t\tend if;\n')
 			
 			f.write(f'\t\t\t\tif ({route['Start']}_lock = RELEASED and {route['End']}_lock = RELEASED) then\n')
 			f.write(f'\t\t\t\t\t{route['Start']}_command <= RESERVE;\n')
@@ -4505,11 +4543,15 @@ class ACG():
 			f.write(f'\t\t\t\tend if;\n')
 			#f.write(f'\t\t\t\tif ({route['Start']}_lock = RESERVED and {route['Start']}_state /= RED) then\n')
 			f.write(f'\t\t\t\tif ({route['Start']}_lock = RESERVED and {route['End']}_lock = LOCKED) then\n')
-			f.write(f'\t\t\t\t\trestart <= \'0\';\n')
+			f.write(f'\t\t\t\t\trestart <= \'1\';\n')
 			f.write(f'\t\t\t\t\trouteState <= SEQUENTIAL_RELEASE;\n')
 			f.write(f'\t\t\t\tend if;\n')		
 
 			f.write(f'\r\t\t\twhen SEQUENTIAL_RELEASE =>\n')
+			f.write(f'\t\t\t\trestart <= \'0\';\n')
+			f.write(f'\t\t\t\tif (routingIn = CANCEL_ROUTE or timeout =\'1\') then\n')
+			f.write(f'\t\t\t\t\trouteState <= CANCEL_ROUTE;\n')
+			f.write(f'\t\t\t\tend if;\n')
 			f.write(f'\t\t\t\t--- Sequential release\n')
 
 			for i,net in enumerate(route['Path']):
@@ -4521,7 +4563,8 @@ class ACG():
 				f.write(f'\t\t\t\t\t{net}_used <= \'1\';\n')
 
 				if net == route['Path'][-1]:
-					f.write(f'\t\t\t\t\t--- Finish -> Release all\n')			
+					f.write(f'\t\t\t\t\t--- Finish -> Release all\n')	
+					f.write(f'\t\t\t\t\trestart <= \'1\';\n')		
 					f.write(f'\t\t\t\t\trouteState <= RELEASING_INFRASTRUCTURE;\n')
 				f.write(f'\t\t\t\tend if;\n')
 
@@ -4545,7 +4588,11 @@ class ACG():
 			
 			f.write(f'\t\t\t\t{route['Start']}_command <= RELEASE;\n')
 			f.write(f'\t\t\t\t{route['End']}_command <= RELEASE;\n')
+			f.write(f'\t\t\t\trestart <= \'1\';\n')
 			f.write(f'\t\t\t\trouteState <= WAITING_COMMAND;\n')
+
+			f.write(f'\r\t\t\twhen CANCEL_ROUTE =>\n')
+			f.write(f'\t\t\t\trouteState <= RELEASING_INFRASTRUCTURE;\n')
 
 			f.write(f'\r\t\t\twhen others =>\n')
 			f.write(f'\t\t\t\trouteState <= WAITING_COMMAND;\n')
