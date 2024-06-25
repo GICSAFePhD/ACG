@@ -1639,7 +1639,7 @@ class ACG():
 		if n_switches > 0:         
 			f.write(f'\t\t\tN_SINGLESWITCHES : natural := {str(n_switches)};\n')
 		if n_doubleSwitch > 0:         
-			f.write(f'\t\t\tN_DOUBLEWITCHES : natural := {str(n_doubleSwitch)};\n')
+			f.write(f'\t\t\tN_DOUBLESWITCHES : natural := {str(n_doubleSwitch)};\n')
 		if n_scissorCrossings > 0:         
 			f.write(f'\t\t\tN_SCISSORCROSSINGS : natural := {str(n_scissorCrossings)};\n')
 		f.write(f'\t\t\tN_TRACKCIRCUITS : natural := {str(n_netElements)}\n')
@@ -1671,7 +1671,7 @@ class ACG():
 		if n_switches > 0:         
 			f.write(f'\t\t\tN_SINGLESWITCHES : natural := {str(n_switches)};\n')
 		if n_doubleSwitch > 0:         
-			f.write(f'\t\t\tN_DOUBLEWITCHES : natural := {str(n_doubleSwitch)};\n')
+			f.write(f'\t\t\tN_DOUBLESWITCHES : natural := {str(n_doubleSwitch)};\n')
 		if n_scissorCrossings > 0:         
 			f.write(f'\t\t\tN_SCRISSORCROSSINGS : natural := {str(n_scissorCrossings)};\n')
 		f.write(f'\t\t\tN : natural := {str(N)}\n')  
@@ -1718,7 +1718,7 @@ class ACG():
 		if n_switches > 0:         
 			f.write(f'\t\t\tN_SINGLESWITCHES : natural := {str(n_switches)};\n')
 		if n_doubleSwitch > 0:         
-			f.write(f'\t\t\tN_DOUBLEWITCHES : natural := {str(n_doubleSwitch)};\n')
+			f.write(f'\t\t\tN_DOUBLESWITCHES : natural := {str(n_doubleSwitch)};\n')
 		if n_scissorCrossings > 0:         
 			f.write(f'\t\t\tN_SCRISSORCROSSINGS : natural := {str(n_scissorCrossings)};\n')
 		f.write(f'\t\t\tN : natural := {str(N)}\n')  
@@ -1783,7 +1783,7 @@ class ACG():
 		if n_switches > 0:         
 			f.write(f'\t\t\tN_SINGLESWITCHES : natural := {str(n_switches)};\n')
 		if n_doubleSwitch > 0:         
-			f.write(f'\t\t\tN_DOUBLEWITCHES : natural := {str(n_doubleSwitch)};\n')
+			f.write(f'\t\t\tN_DOUBLESWITCHES : natural := {str(n_doubleSwitch)};\n')
 		if n_scissorCrossings > 0:         
 			f.write(f'\t\t\tN_SCRISSORCROSSINGS : natural := {str(n_scissorCrossings)};\n')
 		f.write(f'\t\t\tN : natural := {str(N)}\n')  
@@ -1827,7 +1827,7 @@ class ACG():
 		if n_switches > 0:         
 			f.write(f'\t\t\tN_SINGLESWITCHES : natural := {str(n_switches)};\n')
 		if n_doubleSwitch > 0:         
-			f.write(f'\t\t\tN_DOUBLEWITCHES : natural := {str(n_doubleSwitch)};\n')
+			f.write(f'\t\t\tN_DOUBLESWITCHES : natural := {str(n_doubleSwitch)};\n')
 		if n_scissorCrossings > 0:         
 			f.write(f'\t\t\tN_SCRISSORCROSSINGS : natural := {str(n_scissorCrossings)};\n')
 		f.write(f'\t\t\tN : natural := {str(N)}\n')  
@@ -2097,7 +2097,7 @@ class ACG():
 		if n_switches > 0:         
 			f.write(f'\t\t\tN_SINGLESWITCHES : natural := {str(n_switches)};\n')
 		if n_doubleSwitch > 0:         
-			f.write(f'\t\t\tN_DOUBLEWITCHES : natural := {str(n_doubleSwitch)};\n')
+			f.write(f'\t\t\tN_DOUBLESWITCHES : natural := {str(n_doubleSwitch)};\n')
 		if n_scissorCrossings > 0:         
 			f.write(f'\t\t\tN_SCRISSORCROSSINGS : natural := {str(n_scissorCrossings)};\n')
 		f.write(f'\t\t\tN : natural := {str(N)}\n')  
@@ -2299,9 +2299,9 @@ class ACG():
 		if n_switches > 0:         
 			f.write(f'\t\t\tN_SINGLESWITCHES : natural := {str(n_switches)};\n')
 		if n_doubleSwitch > 0:         
-			f.write(f'\t\t\tN_DOUBLEWITCHES : natural := {str(n_doubleSwitch)};\n')
+			f.write(f'\t\t\tN_DOUBLESWITCHES : natural := {str(n_doubleSwitch)};\n')
 		if n_scissorCrossings > 0:         
-			f.write(f'\t\t\tN_SCRISSORCROSSINGS : natural := {str(n_scissorCrossings)};\n')
+			f.write(f'\t\t\tN_SCISSORCROSSINGS : natural := {str(n_scissorCrossings)};\n')
 		f.write(f'\t\t\tN : natural := {str(N)}\n')  
 		f.write(f'\t\t);\n')
 		f.write(f'\t\tport(\n')
@@ -2371,10 +2371,11 @@ class ACG():
 
 						for sw in sws:
 							switch,position = sw.split('_')
-							if new_route not in singleSwitchData[switch]['Routes']:
+							#print(switch,position)
+							if len(position) == 1 and new_route not in singleSwitchData[switch]['Routes']:
 								singleSwitchData[switch]['Routes'].append(f'{new_route}')
 								singleSwitchData[switch]['Position'].append(f'{position}')
-		#print(singleSwitchData)
+
 		# component levelCrossing  
 		if n_levelCrossings > 0:
 			for levelCrossingId in levelCrossingData:
@@ -2503,17 +2504,14 @@ class ACG():
 				f.write(f'indication => singleSwitches_i({index}), command => singleSwitches_o({index}), ')
 			if n_switches == 1:
 				f.write(f'indication => singleSwitches_i, command => singleSwitches_o, ')
-			#f.write(f'lock_{singleSwitchId} => {"s" if singleSwitchId[0].isdigit() else ""}{singleSwitchId}_locking, ')	
 			f.write(f'correspondence => state_{singleSwitchId}, ')
 
 			f.write(f'clock => clock, reset => reset);\r\n')
-		'''
+		
 		# instantiate scissorCrossings
 		for scissorCrossingId in scissorCrossingData:
 			index = list(scissorCrossingData.keys()).index(scissorCrossingId)
 			f.write(f'\tscissorCrossing_{scissorCrossingId} : scissorCrossing_{index} port map(')
-			f.write(f'clock => clock, ')
-			f.write(f'reset => reset, ')
 
 			for element in scissorCrossingData[scissorCrossingId]['Routes']:
 				f.write(f'{element}_command => cmd_{element}_{scissorCrossingId}, ')
@@ -2522,27 +2520,25 @@ class ACG():
 				f.write(f'indication => scissorCrossings_i({index}), command => scissorCrossings_o({index}), ')
 			if n_scissorCrossings == 1:
 				f.write(f'indication => scissorCrossings_i, command => scissorCrossings_o, ')
-			f.write(f'lock_{scissorCrossingId} => {scissorCrossingId}_locking, ')	
-			f.write(f'correspondence_{scissorCrossingId} => state_{scissorCrossingId});\r\n')
+			f.write(f'correspondence => state_{scissorCrossingId}, ')
+
+			f.write(f'clock => clock, reset => reset);\r\n')
 
 		# instantiate doubleSwitches
 		for doubleSwitchId in doubleSwitchData:
 			index = list(doubleSwitchData.keys()).index(doubleSwitchId)
 			f.write(f'\tdoubleSwitch_{doubleSwitchId} : doubleSwitch_{index} port map(')
-			f.write(f'clock => clock, ')
-			f.write(f'reset => reset, ')
-
+	
 			for element in doubleSwitchData[doubleSwitchId]['Routes']:
 				f.write(f'{element}_command => cmd_{element}_{doubleSwitchId}, ')
 
 			if n_doubleSwitch > 1:
-				f.write(f'indication.msb => doubleSwitches_i.msb({index}), indication.lsb => doubleSwitches_i.lsb({index}), ')
-				f.write(f'command.msb => doubleSwitches_o.msb({index}), command.lsb => doubleSwitches_o.lsb({index}),')
+				f.write(f'indication => doubleSwitches_i({index}), command => doubleSwitches_o({index}),')
 			if n_doubleSwitch == 1:
 				f.write(f'indication => doubleSwitches_i, command => doubleSwitches_o, ')
-			f.write(f'lock_{doubleSwitchId} => {doubleSwitchId}_locking, ')	
-			f.write(f'correspondence_{doubleSwitchId} => state_{doubleSwitchId});\r\n')
-		'''
+			f.write(f'correspondence=> state_{doubleSwitchId}, ')
+		
+			f.write(f'clock => clock, reset => reset);\r\n')
 
 		# instantiate signals
 		for signalId in signalData:
@@ -2891,6 +2887,32 @@ class ACG():
 		if n_switches == 1:
 			f.write(f'\t\t\t\tsingleSwitches_V <= two_out_of_three_hex(singleSwitches_A, singleSwitches_B, singleSwitches_C);\n')
 			f.write(f'\t\t\t\tif singleSwitches_V = \'F\' then\n')
+			f.write(f'\t\t\t\t\tdefault_case_flag <= \'1\';\n')
+			f.write(f'\t\t\t\tend if;\n')
+
+		if n_doubleSwitch > 1:
+			f.write(f'\t\t\tfor i in 0 to N_DOUBLESWITCHES-1 loop\n')
+			f.write(f'\t\t\t\tdoubleSwitches_V(i) <= two_out_of_three_hex(doubleSwitches_A(i), doubleSwitches_B(i), doubleSwitches_C(i));\n')
+			f.write(f'\t\t\t\tif doubleSwitches_V(i) = \'F\' then\n')
+			f.write(f'\t\t\t\t\tdefault_case_flag <= \'1\';\n')
+			f.write(f'\t\t\t\tend if;\n')
+			f.write(f'\t\t\tend loop;\n')
+		if n_doubleSwitch == 1:
+			f.write(f'\t\t\t\tdoubleSwitches_V <= two_out_of_three_hex(doubleSwitches_A, doubleSwitches_B, doubleSwitches_C);\n')
+			f.write(f'\t\t\t\tif doubleSwitches_V = \'F\' then\n')
+			f.write(f'\t\t\t\t\tdefault_case_flag <= \'1\';\n')
+			f.write(f'\t\t\t\tend if;\n')
+		
+		if n_scissorCrossings > 1:
+			f.write(f'\t\t\tfor i in 0 to N_SCISSORCROSSINGS-1 loop\n')
+			f.write(f'\t\t\t\tscissorCrossings_V(i) <= two_out_of_three_hex(scissorCrossings_A(i), scissorCrossings_B(i), scissorCrossings_C(i));\n')
+			f.write(f'\t\t\t\tif scissorCrossings_V(i) = \'F\' then\n')
+			f.write(f'\t\t\t\t\tdefault_case_flag <= \'1\';\n')
+			f.write(f'\t\t\t\tend if;\n')
+			f.write(f'\t\t\tend loop;\n')
+		if n_scissorCrossings == 1:
+			f.write(f'\t\t\t\tscissorCrossings_V <= two_out_of_three_hex(scissorCrossings_A, scissorCrossings_B, scissorCrossings_C);\n')
+			f.write(f'\t\t\t\tif scissorCrossings_V = \'F\' then\n')
 			f.write(f'\t\t\t\t\tdefault_case_flag <= \'1\';\n')
 			f.write(f'\t\t\t\tend if;\n')
 
@@ -4637,8 +4659,8 @@ class ACG():
 
 		for switch in sw_list:
 			if switch != None:
-				f.write(f'\t\t\t{switch}_state : in hex_char;\n')
-				f.write(f'\t\t\t{switch}_command : out routeCommands := RELEASE;\n')
+				f.write(f'\t\t\t{"s" if switch[0].isdigit() else ""}{switch}_state : in hex_char;\n')
+				f.write(f'\t\t\t{"s" if switch[0].isdigit() else ""}{switch}_command : out routeCommands := RELEASE;\n')
 
 		for scissorCrossings in route['ScissorCrossings']:
 			scissor_aux = scissorCrossings.split('_')
