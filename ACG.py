@@ -2723,7 +2723,7 @@ class ACG():
 		if n_switches > 0:         
 			f.write(f'\t\t\tN_SINGLESWITCHES : natural := {str(n_switches)};\n')
 		if n_doubleSwitch > 0:         
-			f.write(f'\t\t\tN_DOUBLEWITCHES : natural := {str(n_doubleSwitch)};\n')
+			f.write(f'\t\t\tN_DOUBLESWITCHES : natural := {str(n_doubleSwitch)};\n')
 		if n_scissorCrossings > 0:         
 			f.write(f'\t\t\tN_SCRISSORCROSSINGS : natural := {str(n_scissorCrossings)};\n')
 		f.write(f'\t\t\tN : natural := {str(N)}\n')  
@@ -4055,8 +4055,20 @@ class ACG():
 						f.write(f'\tsignal {j}_lock : objectLock := RELEASED;\n')	
 			if len(switches_1) > 0:
 				for k in switches_1:
-					if f'\tsignal {"s" if k[0].isdigit() else ""}{k.split('_')[0]}_position : singleSwitchStates := NORMAL;\n' not in sw_string_1A:
-						sw_string_1A.append(f'\tsignal {"s" if k[0].isdigit() else ""}{k.split('_')[0]}_position : singleSwitchStates := NORMAL;\n')
+    					
+					if len(k.split('_')[1]) == 1:
+						type = 'singleSwitchStates'
+						default = 'NORMAL'
+					if len(k.split('_')[1]) == 2:
+						if k.split('_')[1][0] == 'X':
+							type = 'scissorCrossingStates'
+							default = 'NORMAL'
+						else:
+							type = 'doubleSwitchStates'	
+							default = 'DOUBLE_NORMAL'
+
+					if f"\tsignal {"s" if k[0].isdigit() else ""}{k.split('_')[0]}_position : {type} := {default};\n" not in sw_string_1A:
+						sw_string_1A.append(f"\tsignal {"s" if k[0].isdigit() else ""}{k.split('_')[0]}_position : {type} := {default};\n")
 					if f'\tsignal {"s" if k[0].isdigit() else ""}{k.split('_')[0]}_lock : objectLock := RELEASED;\n' not in sw_string_1B:
 						sw_string_1B.append(f'\tsignal {"s" if k[0].isdigit() else ""}{k.split('_')[0]}_lock : objectLock := RELEASED;\n')
 				for aux in sw_string_1A:
@@ -4079,8 +4091,18 @@ class ACG():
 						f.write(f'\tsignal {j}_lock : objectLock := RELEASED;\n')	
 			if len(switches_2) > 0:
 				for k in switches_2:
-					if f'\tsignal {"s" if k[0].isdigit() else ""}{k.split('_')[0]}_position : singleSwitchStates := NORMAL;\n' not in sw_string_2A:
-						sw_string_2A.append(f'\tsignal {"s" if k[0].isdigit() else ""}{k.split('_')[0]}_position : singleSwitchStates := NORMAL;\n')
+					if len(k.split('_')[1]) == 1:
+						type = 'singleSwitchStates'
+						default = 'NORMAL'
+					if len(k.split('_')[1]) == 2:
+						if k.split('_')[1][0] == 'X':
+							type = 'scissorCrossingStates'
+							default = 'NORMAL'
+						else:
+							type = 'doubleSwitchStates'	
+							default = 'DOUBLE_NORMAL'
+					if f"\tsignal {"s" if k[0].isdigit() else ""}{k.split('_')[0]}_position : {type} := {default};\n" not in sw_string_2A:
+						sw_string_2A.append(f"\tsignal {"s" if k[0].isdigit() else ""}{k.split('_')[0]}_position : {type} := {default};\n")
 					if f'\tsignal {"s" if k[0].isdigit() else ""}{k.split('_')[0]}_lock : objectLock := RELEASED;\n' not in sw_string_2B:
 						sw_string_2B.append(f'\tsignal {"s" if k[0].isdigit() else ""}{k.split('_')[0]}_lock : objectLock := RELEASED;\n')
 				for aux in sw_string_2A:
@@ -4131,7 +4153,17 @@ class ACG():
 			if len(switches_1) > 0:
 				for k in switches_1:
 					sw = f'{"s" if k[0].isdigit() else ""}{k.split('_')[0]}'
-					condition1 = f"\t{sw}_position <= singleSwitchStates'val(to_integer(unsigned(hex_to_slv({sw}_state)(2 to 3))));\n"
+					if len(k.split('_')[1]) == 1:
+						type = 'singleSwitchStates'
+						default = 'NORMAL'
+					if len(k.split('_')[1]) == 2:
+						if k.split('_')[1][0] == 'X':
+							type = 'scissorCrossingStates'
+							default = 'NORMAL'
+						else:
+							type = 'doubleSwitchStates'	
+							default = 'DOUBLE_NORMAL'
+					condition1 = f"\t{sw}_position <= {type}'val(to_integer(unsigned(hex_to_slv({sw}_state)(2 to 3))));\n"
 					condition2 = f"\t{sw}_lock <= objectLock'val(to_integer(unsigned(hex_to_slv({sw}_state)(0 to 1))));\n"
 					if condition1 not in sw_string_1A:
 						sw_string_1A.append(condition1)
@@ -4158,7 +4190,17 @@ class ACG():
 			if len(switches_2) > 0:
 				for k in switches_2:
 					sw = f'{"s" if k[0].isdigit() else ""}{k.split('_')[0]}'
-					condition1 = f"\t{sw}_position <= singleSwitchStates'val(to_integer(unsigned(hex_to_slv({sw}_state)(2 to 3))));\n"
+					if len(k.split('_')[1]) == 1:
+						type = 'singleSwitchStates'
+						default = 'NORMAL'
+					if len(k.split('_')[1]) == 2:
+						if k.split('_')[1][0] == 'X':
+							type = 'scissorCrossingStates'
+							default = 'NORMAL'
+						else:
+							type = 'doubleSwitchStates'	
+							default = 'DOUBLE_NORMAL'
+					condition1 = f"\t{sw}_position <= {type}'val(to_integer(unsigned(hex_to_slv({sw}_state)(2 to 3))));\n"
 					condition2 = f"\t{sw}_lock <= objectLock'val(to_integer(unsigned(hex_to_slv({sw}_state)(0 to 1))));\n"
 					if condition1 not in sw_string_2A:
 						sw_string_2A.append(condition1)
