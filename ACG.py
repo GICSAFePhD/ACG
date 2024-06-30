@@ -3645,21 +3645,36 @@ class ACG():
 			f.write(f'\t\t\t\tpositionStateOut <= positionStateIn;\n')
 			f.write(f'\t\t\t\tlockStateOut <= RELEASED;\n')
 			f.write(f'\t\t\twhen RESERVE =>\r\n')
-			f.write(f'\t\t\t\tif (({reserveState_NN}) and ({freeState_RR}) and ({freeState_RN}) and ({freeState_NR})) then\n')
+			f.write(f'\t\t\t\tif (({reserveState_NN}) and ({freeState_RR} and {freeState_RN} and {freeState_NR})) then\n')
 			f.write(f'\t\t\t\t\tpositionStateOut <= DOUBLE_NORMAL;\n')
 			f.write(f'\t\t\t\tend if;\n')
 			f.write(f'\t\t\t\tif (({freeState_NN}) and ({reserveState_RR}) and ({freeState_RN}) and ({freeState_NR})) then\n')
 			f.write(f'\t\t\t\t\tpositionStateOut <= DOUBLE_REVERSE;\n')
 			f.write(f'\t\t\t\tend if;\n')
-			f.write(f'\t\t\t\tlockStateOut <= RESERVED;\n')
-			f.write(f'\t\t\twhen LOCK =>\r\n')
 			f.write(f'\t\t\t\tif (({freeState_NN}) and ({freeState_RR}) and ({reserveState_RN}) and ({freeState_NR})) then\n')
 			f.write(f'\t\t\t\t\tpositionStateOut <= REVERSE_NORMAL;\n')
 			f.write(f'\t\t\t\tend if;\n')
 			f.write(f'\t\t\t\tif (({freeState_NN}) and ({freeState_RR}) and ({freeState_RN}) and ({reserveState_NR})) then\n')
 			f.write(f'\t\t\t\t\tpositionStateOut <= NORMAL_REVERSE;\n')
 			f.write(f'\t\t\t\tend if;\n')
+			f.write(f'\t\t\t\tlockStateOut <= RESERVED;\n')
+
+			f.write(f'\t\t\twhen LOCK =>\r\n')
+
+			f.write(f'\t\t\t\tif (({lockState_NN}) and ({freeState_RR} and {freeState_RN} and {freeState_NR})) then\n')
+			f.write(f'\t\t\t\t\tpositionStateOut <= DOUBLE_NORMAL;\n')
+			f.write(f'\t\t\t\tend if;\n')
+			f.write(f'\t\t\t\tif (({freeState_NN}) and ({lockState_RR}) and ({freeState_RN}) and ({freeState_NR})) then\n')
+			f.write(f'\t\t\t\t\tpositionStateOut <= DOUBLE_REVERSE;\n')
+			f.write(f'\t\t\t\tend if;\n')
+			f.write(f'\t\t\t\tif (({freeState_NN}) and ({freeState_RR}) and ({lockState_RN}) and ({freeState_NR})) then\n')
+			f.write(f'\t\t\t\t\tpositionStateOut <= REVERSE_NORMAL;\n')
+			f.write(f'\t\t\t\tend if;\n')
+			f.write(f'\t\t\t\tif (({freeState_NN}) and ({freeState_RR}) and ({freeState_RN}) and ({lockState_NR})) then\n')
+			f.write(f'\t\t\t\t\tpositionStateOut <= NORMAL_REVERSE;\n')
+			f.write(f'\t\t\t\tend if;\n')
 			f.write(f'\t\t\t\tlockStateOut <= LOCKED;\n')
+
 			f.write(f'\t\t\twhen others =>\r\n')
 			f.write(f'\t\t\t\tpositionStateOut <= positionStateIn;\n')
 			f.write(f'\t\t\t\tlockStateOut <= LOCKED;\n')
@@ -4261,8 +4276,12 @@ class ACG():
 			else:
 				f.write(f'\tlockStateOut <= RELEASED;\n')
 
+			for path in paths:
+				if 'Switches' in paths[path]:
+					switches = ",".join(f'{"s" if x[0].isdigit() else ""}{x.split('_')[0]}_position' for x in paths[path]['Switches'])
+
 			if paths != {}:
-				f.write(f'\n\tprocess(commandState)\n')
+				f.write(f"\n\tprocess(commandState{',' if len(switches) > 0 else ''}{switches})\n")
 				f.write(f'\tbegin\n')
 				f.write(f'\t\tcase commandState is\n')
 				f.write(f'\r\t\t\twhen RELEASE =>\n')
