@@ -231,8 +231,10 @@ class ACG():
 		SignalsIS =         RML.Infrastructure.FunctionalInfrastructure.SignalsIS
 		Routes =            RML.Interlocking.AssetsForIL[0].Routes
 
-		Graph = gv.Graph('finite_state_machine',filename='a.gv', graph_attr={'overlap':'false','rankdir':"LR",'splines':'true','center':'1','labelloc':'t'},node_attr={'fillcolor': 'white', 'style': 'filled,bold', 'pendwidth':'5', 'fontname': 'Courier New', 'shape': 'Mrecord'}) #node_attr={'color': 'lightgreen', 'style': 'filled', 'size' : '8.5'}
+		#Graph = gv.Graph('finite_state_machine',filename='a.gv', graph_attr={'overlap':'false','rankdir':"LR",'splines':'true','center':'1','labelloc':'t'},node_attr={'fillcolor': 'white', 'style': 'filled,bold', 'pendwidth':'5', 'fontname': 'Courier New', 'shape': 'Mrecord'}) #node_attr={'color': 'lightgreen', 'style': 'filled', 'size' : '8.5'}
 		
+		Graph = gv.Graph('finite_state_machine',filename='a.gv', graph_attr={'overlap':'scale','newrank':"true",'splines':'true','center':'1','labelloc':'t','ratio':'compress','size':'300,300!'},node_attr={'fillcolor': 'white', 'style': 'filled,bold', 'pendwidth':'5', 'fontname': 'Courier New', 'shape': 'Mrecord'}) #node_attr={'color': 'lightgreen', 'style': 'filled', 'size' : '8.5'}
+
 		
 		G_Topology = nx.Graph()
 
@@ -687,7 +689,8 @@ class ACG():
 		f.write(f'\tuart_inst : entity work.uart\n')
 		
 		f.write(f'\t\tgeneric map(\n')
-		f.write(f'\t\t\tDVSR      => 407,	-- baud rate divisor DVSR = 125M / (16 * baud rate) baud rate = 19200\n')
+		#f.write(f'\t\t\tDVSR      => 407,	-- baud rate divisor DVSR = 125M / (16 * baud rate) baud rate = 19200\n')
+		f.write(f'\t\t\tDVSR      => 325,	-- baud rate divisor DVSR = 100M / (16 * baud rate) baud rate = 19200\n')
 		f.write(f'\t\t\tDVSR_BIT  => 9,   --  bits of DVSR\n')
 		f.write(f'\t\t\tFIFO_W_RX	=> {str(int(round(np.log2(N)))+1)}, 	--  addr bits of FIFO words in FIFO=2^FIFO_W\n')
 		f.write(f'\t\t\tFIFO_W_TX	=> {str(int(round(np.log2(M)))+1)} 	--  addr bits of FIFO words in FIFO=2^FIFO_W\n')			
@@ -788,7 +791,7 @@ class ACG():
 		f.write(f'\t\t\t\trd_uart <= \'0\';\n')
 		f.write(f'\t\t\telsif empty_in = \'0\' then   -- Data available\n')
 		f.write(f'\t\t\t\tcount_i := count_i + 1;\n')                          
-		f.write(f'\t\t\t\tif count_i = 125E3 then    -- Count 100 msecs\n')
+		f.write(f'\t\t\t\tif count_i = 100E3 then    -- Count 100 msecs\n')
 		f.write(f'\t\t\t\t\tcount_i := 0;\n')
 		f.write(f'\t\t\t\t\trd_uart <= \'1\';     -- Request new data"+"\n')
 		f.write(f'\t\t\t\t\tL := L + 1;\n')
@@ -835,7 +838,8 @@ class ACG():
 		f.write(f'\t\t\t-- 19200 baud, 8 data bits, 1 stop bit, 2^2 FIFO\n')
 		f.write(f'\t\t\tDBIT: integer := 8; -- # data bits\n')
 		f.write(f'\t\t\tSB_TICK: integer := 16;	-- # ticks for stop bits, 16/24/32 -- for 1/1.5/2 stop bits\n')
-		f.write(f'\t\t\tDVSR: integer := 407; 	-- baud rate divisor -- DVSR = 125M / (16 * baud rate)\n')
+		#f.write(f'\t\t\tDVSR: integer := 407; 	-- baud rate divisor -- DVSR = 125M / (16 * baud rate)\n')
+		f.write(f'\t\t\tDVSR: integer := 325; 	-- baud rate divisor -- DVSR = 100M / (16 * baud rate)\n')
 		f.write(f'\t\t\tDVSR_BIT: integer := 9; 	-- # bits of DVSR\n')
 		f.write(f'\t\t\tFIFO_W_TX: integer := 4; 	-- # addr bits of FIFO_TX # words in FIFO=2^FIFO_W\n')
 		f.write(f'\t\t\tFIFO_W_RX: integer := 4 	-- # addr bits of FIFO_TX # words in FIFO=2^FIFO_W\n')
@@ -1464,7 +1468,7 @@ class ACG():
 		f.write(f'\t\t\t\t\treset_uart <= \'0\';\n')
 		f.write(f'\t\t\t\telse\n')
 		f.write(f'\t\t\t\t\tcounter := counter + 1;\n')
-		f.write(f'\t\t\t\t\tif counter = 10*125E6 then\n')
+		f.write(f'\t\t\t\t\tif counter = 10*100E6 then\n')
 		f.write(f'\t\t\t\t\t\tcounter := 0;\n') 
 		f.write(f'\t\t\t\t\t\treset_uart <= \'1\';\n')  
 		f.write(f'\t\t\t\t\telse\n')
@@ -3178,7 +3182,7 @@ class ACG():
 			reserveState = " or ".join([f'{i}_command = RESERVE' for i in commands])
 			lockState = " or ".join([f'{i}_command = LOCK' for i in commands])
 
-			freq = 125e6
+			freq = 100e6
 			timeout = 7
 
 			FF = math.ceil(math.log2(timeout*freq))
@@ -3365,7 +3369,7 @@ class ACG():
 			lockState_N = " or ".join([f'{i}_command = LOCK' for i in commands_N])
 			lockState_R = " or ".join([f'{i}_command = LOCK' for i in commands_R])
 
-			freq = 125e6
+			freq = 100e6
 			timeout = 7
 
 			FF = math.ceil(math.log2(timeout*freq))
@@ -3561,7 +3565,7 @@ class ACG():
 			lockState_RN = " or ".join([f'{i}_command = LOCK' for i in commands_RN])
 			lockState_NR = " or ".join([f'{i}_command = LOCK' for i in commands_NR])
 
-			freq = 125e6
+			freq = 100e6
 			timeout = 7
 
 			FF = math.ceil(math.log2(timeout*freq))
@@ -3769,7 +3773,7 @@ class ACG():
 			lockState_N = " or ".join([f'{i}_command = LOCK' for i in commands_N])
 			lockState_R = " or ".join([f'{i}_command = LOCK' for i in commands_R])
 
-			freq = 125e6
+			freq = 100e6
 			timeout = 7
 
 			FF = math.ceil(math.log2(timeout*freq))
@@ -4006,7 +4010,7 @@ class ACG():
 
 			route_cmds = ",".join([f'{i}_command' for i in commands])
 
-			freq = 125e6
+			freq = 100e6
 			timeout = 7
 
 			FF = math.ceil(math.log2(timeout*freq))
@@ -4754,7 +4758,7 @@ class ACG():
 			reserveState = " or ".join([f'{i}_state = RESERVE' for i in route['Path']])
 			lockState = " or ".join([f'{i}_state = LOCK' for i in route['Path']])
 				
-			freq = 125e6
+			freq = 100e6
 			timeout = 30
 
 			FF = math.ceil(math.log2(timeout*freq))
