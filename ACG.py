@@ -235,7 +235,6 @@ class ACG():
 		
 		Graph = gv.Graph('finite_state_machine',filename='a.gv', graph_attr={'overlap':'scale','newrank':"true",'splines':'true','center':'1','labelloc':'t','ratio':'compress','size':'300,300!'},node_attr={'fillcolor': 'white', 'style': 'filled,bold', 'pendwidth':'5', 'fontname': 'Courier New', 'shape': 'Mrecord'}) #node_attr={'color': 'lightgreen', 'style': 'filled', 'size' : '8.5'}
 
-		
 		G_Topology = nx.Graph()
 
 		Signal_net = {}
